@@ -91,14 +91,16 @@ joeyhodge, elliotttate, madscy, Nero 정말 고맙습니다. 캐릭터 코드명
 
 ### 1. 프로필 (추천)
 
-[Releases](../../releases)에서 **`SWGR-VR-Cockpit-v2.0.0-KO.zip`**(영어 메뉴는 `-EN.zip`)을
-받으세요.
+언어마다 릴리스가 따로 있고, 파일 이름이 UEVR이 필요로 하는 **`SWGR-Win64-Shipping.zip`** 그대로라
+이름을 바꿀 필요가 없어요:
+
+- 한글 메뉴: [**v2.0.0-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.0-ko)
+- 영어 메뉴: [**v2.0.0**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.0)
 
 1. 게임을 끄고 지금 프로필을 **백업**하세요: `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`
-2. 둘 중 하나:
-   - zip 이름을 **`SWGR-Win64-Shipping.zip`**으로 바꾸고 UEVR의 **Import Config**로 가져오기
-     (UEVR은 zip 파일 이름으로 프로필 폴더를 정해요), 또는
-   - zip 안의 내용을 `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`에 그대로 풀기.
+2. **`SWGR-Win64-Shipping.zip`**을 UEVR의 **Import Config**로 그대로 가져오거나, zip 안의 내용을
+   `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`에 그대로 푸세요. `data` 같은 폴더는 필요할 때
+   UEVR과 스크립트가 알아서 만들어요.
 3. 프로필의 `scripts` 폴더에서 예전 카메라 스크립트를 지우세요: `swgr_cockpit_camera.lua`,
    `swgr_stable_camera.lua` 같은 `swgr_cockpit_*.lua`. 같이 돌면 서로 싸워요 (남아 있으면
    메뉴에 경고가 떠요).
@@ -113,14 +115,14 @@ joeyhodge, elliotttate, madscy, Nero 정말 고맙습니다. 캐릭터 코드명
 
 ### 2. 스크립트만
 
-이미 잘 되는 프로필이 있으면 **`swgr_vr_cockpit-v2.0.0-KO.lua`**(또는 `-EN.lua`)만 받아서
+이미 잘 되는 프로필이 있으면 원하는 언어 릴리스에서 **`swgr_vr_cockpit.lua`**만 받아서
 프로필의 `scripts` 폴더에 넣고, 예전 콕핏 스크립트를 지우세요 (위 3번). Nero의 화면 어긋남
 수정은 [알아둘 점](#알아둘-점)을 보세요.
 
 ### 3. pak 모드 (선택)
 
-**`SWGR-NoBlackBars-pak-v2.0.0.zip`**: VR에서 보기 싫은 검은 띠와 판을 없애요. 바로 아래
-[pak 모드](#pak-모드)를 보세요.
+**`SWGR-NoBlackBars-pak-v2.0.0.zip`**(두 릴리스 모두에 있어요): VR에서 보기 싫은 검은 띠와 판을
+없애요. 바로 아래 [pak 모드](#pak-모드)를 보세요.
 
 ### v1.2.0에서 올라올 때
 
@@ -402,8 +404,9 @@ build.py        dist/EN|KO/swgr_vr_cockpit.lua 빌드, "release"는 배포 파�
 
 - `python build.py` → `dist/EN/swgr_vr_cockpit.lua`, `dist/KO/swgr_vr_cockpit.lua`.
   `src/NN_*.lua` 하나하나를 `do … end`로 감싸요.
-- `python build.py release [PAK_폴더]` → `release/`에 프로필 zip 두 개, 스크립트 단독 파일,
-  (`PAK_폴더`가 있으면) pak 모드 zip.
+- `python build.py release [PAK_폴더]` → `release/EN/`과 `release/KO/`에 각각
+  `SWGR-Win64-Shipping.zip`(프로필)과 `swgr_vr_cockpit.lua`, (`PAK_폴더`가 있으면) `release/`에
+  pak 모드 zip.
 - `python tests/run_tests.py dist/KO/swgr_vr_cockpit.lua - next`로 가짜 게임에서 스크립트를
   돌려요: 메뉴(모든 위젯 클릭, ID 중복·트리/폭/비활성 짝·설명에 `%` 없는지), 시동 장면, 모든
   부스터·착지·드리프트·충돌이 있는 레이스, 일시정지, 카메라 전환, 단축키, 차량 교체, 스크립트

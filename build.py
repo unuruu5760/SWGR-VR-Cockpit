@@ -2,11 +2,12 @@
 
   python build.py                    -> dist/EN/swgr_vr_cockpit.lua, dist/KO/swgr_vr_cockpit.lua
   python build.py release [PAK_DIR]  -> release/
-        SWGR-VR-Cockpit-v<ver>-EN.zip / -KO.zip   the whole UEVR profile (rename to
-                                                  SWGR-Win64-Shipping.zip for UEVR "Import Config")
-        swgr_vr_cockpit-v<ver>-EN.lua / -KO.lua   the script on its own
-        SWGR-NoBlackBars-pak-v<ver>.zip           the optional pak mod, if PAK_DIR holds
-                                                  zzz_SWGR_NoBlackBars_P.pak/.ucas/.utoc
+        EN/SWGR-Win64-Shipping.zip, KO/SWGR-Win64-Shipping.zip   the whole UEVR profile; the
+                                         file name is the one UEVR "Import Config" needs, so each
+                                         language goes into its own GitHub release
+        EN/swgr_vr_cockpit.lua, KO/swgr_vr_cockpit.lua           the script on its own
+        SWGR-NoBlackBars-pak-v<ver>.zip  the optional pak mod, if PAK_DIR holds
+                                         zzz_SWGR_NoBlackBars_P.pak/.ucas/.utoc
 
 The script is made of the sections in src/: _header.lua, then every NN_*.lua wrapped in
 do ... end (each section gets its own 200-local budget), then _footer.lua."""
@@ -69,10 +70,11 @@ def release(pak_dir=None):
                          'C:\\Windows\\Fonts\\malgun.ttf (맑은 고딕)를 이 폴더에 복사하세요.\n'
                          'UEVR 메뉴는 프로필의 fonts 폴더에 있는 글꼴만 읽어요. 없으면 메뉴의 한글이 ? 로 나와요.\n'
                          '(윈도우에 들어 있는 글꼴이라 여기에는 넣지 않았어요.)\n')
-        z = os.path.join(out, 'SWGR-VR-Cockpit-v%s-%s.zip' % (VERSION, L))
+        os.makedirs(os.path.join(out, L))
+        z = os.path.join(out, L, 'SWGR-Win64-Shipping.zip')
         zip_dir(stage, z)
         shutil.rmtree(stage)
-        lone = os.path.join(out, 'swgr_vr_cockpit-v%s-%s.lua' % (VERSION, L))
+        lone = os.path.join(out, L, SCRIPT)
         shutil.copy(script, lone)
         made += [z, lone]
     if pak_dir:

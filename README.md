@@ -94,15 +94,17 @@ Full list: [CHANGELOG.md](CHANGELOG.md).
 
 ### 1. The profile (recommended)
 
-Download **`SWGR-VR-Cockpit-v2.0.0-EN.zip`** (or **`-KO.zip`** for the Korean menu) from the
-[Releases](../../releases) page.
+Each language has its own release with a file named **`SWGR-Win64-Shipping.zip`** — the name
+UEVR needs, so there is nothing to rename:
+
+- English menu: [**v2.0.0**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.0)
+- Korean menu: [**v2.0.0-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.0-ko)
 
 1. Close the game and **back up** your current profile:
    `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`
-2. Either
-   - rename the zip to **`SWGR-Win64-Shipping.zip`** and use UEVR's **Import Config**
-     (UEVR picks the profile folder from the zip's file name), or
-   - extract the zip's contents straight into `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`.
+2. Import **`SWGR-Win64-Shipping.zip`** with UEVR's **Import Config** as it is, or extract its
+   contents straight into `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`. Folders such as `data`
+   are created by UEVR and the script when needed.
 3. Remove older camera scripts from the profile's `scripts` folder — `swgr_cockpit_camera.lua`,
    `swgr_stable_camera.lua` and other `swgr_cockpit_*.lua`. They fight with this one (the menu
    warns you if one is still there).
@@ -117,14 +119,14 @@ with Nero's stereo-mismatch fixes, plus the script.
 
 ### 2. Script only
 
-Already have a working profile? Download **`swgr_vr_cockpit-v2.0.0-EN.lua`** (or `-KO.lua`),
-put it in the profile's `scripts` folder and remove the older cockpit scripts (step 3 above).
+Already have a working profile? Download **`swgr_vr_cockpit.lua`** from the release of your
+language, put it in the profile's `scripts` folder and remove the older cockpit scripts (step 3 above).
 For Nero's stereo-mismatch fixes, see [Known issues and notes](#known-issues-and-notes).
 
 ### 3. Pak mod (optional)
 
-**`SWGR-NoBlackBars-pak-v2.0.0.zip`** removes the black bars and panels that look bad in VR. See
-[Pak mod](#pak-mod) right below.
+**`SWGR-NoBlackBars-pak-v2.0.0.zip`** (in both releases) removes the black bars and panels that
+look bad in VR. See [Pak mod](#pak-mod) right below.
 
 ### Updating from v1.2.0
 
@@ -421,8 +423,9 @@ build.py        builds dist/EN|KO/swgr_vr_cockpit.lua; "release" builds the pack
 
 - `python build.py` → `dist/EN/swgr_vr_cockpit.lua`, `dist/KO/swgr_vr_cockpit.lua`.
   Each `src/NN_*.lua` is wrapped in `do … end`.
-- `python build.py release [PAK_DIR]` → `release/` with both profile zips, the scripts on their
-  own and (with `PAK_DIR`) the pak mod zip.
+- `python build.py release [PAK_DIR]` → `release/EN/` and `release/KO/`, each with
+  `SWGR-Win64-Shipping.zip` (the profile) and `swgr_vr_cockpit.lua`, and (with `PAK_DIR`) the
+  pak mod zip in `release/`.
 - `python tests/run_tests.py dist/EN/swgr_vr_cockpit.lua - next` runs the script in a fake game:
   menu (every widget clicked; duplicate IDs, tree / width / disabled balance, no `%` in texts),
   the engine-start shot, a race with every boost, landings, drift, impacts, pause, camera
