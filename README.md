@@ -26,7 +26,8 @@ script) is by **ody**.
 
 Huge thanks to joeyhodge, elliotttate, madscy and Nero. Thanks also to
 [Random-kaizoku/PracticeMode-SWGR](https://github.com/Random-kaizoku/PracticeMode-SWGR) for the
-hint that helped map the characters' codenames to their names.
+hint that helped map the characters' codenames to their names. The Korean menu uses
+Nanum Gothic by Naver (SIL Open Font License 1.1).
 
 ## Contents
 
@@ -107,10 +108,7 @@ UEVR needs, so there is nothing to rename:
 2. Import **`SWGR-Win64-Shipping.zip`** with UEVR's **Import Config** as it is, or extract its
    contents into a new `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`. Folders such as `data` are
    created by UEVR and the script when needed.
-3. **Korean menu only:** copy `C:\Windows\Fonts\malgun.ttf` into the profile's `fonts` folder.
-   UEVR loads menu fonts only from there; without it the Korean text shows as `?`.
-   (The font is part of Windows and is not redistributed here.)
-4. Start the game and inject UEVR. The script runs by itself; its menu is in
+3. Start the game and inject UEVR. The script runs by itself; its menu is in
    **UEVR menu (Insert) → Script UI → STAR WARS Galactic Racer VR**.
 
 The profile contains the UEVR settings, `user_script.txt` and the cvars of the v1.2.0 profile
@@ -120,7 +118,9 @@ with Nero's stereo-mismatch fixes, plus the script.
 
 Already have a working profile? Download **`swgr_vr_cockpit.lua`** from the release of your
 language, put it in the profile's `scripts` folder and remove the older cockpit scripts there
-(`swgr_cockpit_*.lua`, `swgr_stable_camera.lua`) — they fight with this one.
+(`swgr_cockpit_*.lua`, `swgr_stable_camera.lua`) — they fight with this one. For the Korean
+menu also copy the `fonts` folder from the Korean `SWGR-Win64-Shipping.zip` into the profile
+(UEVR loads menu fonts only from there; without it the Korean text shows as `?`).
 For Nero's stereo-mismatch fixes, see [Known issues and notes](#known-issues-and-notes).
 
 ### 3. Pak mod (optional)
@@ -405,7 +405,7 @@ In the UEVR profile (`%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`):
 | `data/swgr_vr_settings.json` | Shared settings, hotkeys, shared fine-tuning values you changed. |
 | `data/swgr_vr_vehicles.json` | Per-vehicle values: `eyes`, `feel` (% amounts), `detail` (fine tuning), `pilotFollow` (per character). Only what you changed. |
 | `data/swgr_vr_views.json` | Menu screen positions you saved. |
-| `fonts/malgun.ttf` | Korean menu font (you copy it in). |
+| `fonts/NanumGothic-Regular.ttf` | Korean menu font (Korean profile only; Nanum Gothic, SIL Open Font License, `fonts/OFL.txt`). |
 
 Delete a `data` file to start over from the defaults. The log goes to UEVR's `log.txt`, lines
 start with `[SWGR VR]`.
@@ -418,7 +418,7 @@ start with `[SWGR VR]`.
 src/            the script, in sections (_header, 00_core … 90_menu, _footer), all in English;
                 lang_ko.lua = the Korean menu text, added only to the Korean build
 profile/        the UEVR profile files (config, cameras, cvars, user_script, v1.x validation notes)
-profile_ko/     extra files for the Korean profile only (the font note)
+profile_ko/     extra files for the Korean profile only (the menu font and its license)
 tests/          run_tests.py + mock.lua: the script against a fake game
 build.py        builds dist/EN|KO/swgr_vr_cockpit.lua; "release" builds the packages
 ```

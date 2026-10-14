@@ -26,7 +26,7 @@ VR 콕핏 시점에서 차가 미동도 안 했어요. 엔진 떨림도, 노면 
 
 joeyhodge, elliotttate, madscy, Nero 정말 고맙습니다. 캐릭터 코드명과 이름을 잇는 데 실마리를 준
 [Random-kaizoku/PracticeMode-SWGR](https://github.com/Random-kaizoku/PracticeMode-SWGR)에도
-감사드려요.
+감사드려요. 한글 메뉴 글꼴은 네이버의 나눔고딕(SIL 오픈 폰트 라이선스 1.1)이에요.
 
 ## 목차
 
@@ -104,10 +104,7 @@ joeyhodge, elliotttate, madscy, Nero 정말 고맙습니다. 캐릭터 코드명
 2. **`SWGR-Win64-Shipping.zip`**을 UEVR의 **Import Config**로 그대로 가져오거나, zip 안의 내용을
    새 `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` 폴더에 푸세요. `data` 같은 폴더는 필요할 때
    UEVR과 스크립트가 알아서 만들어요.
-3. **한글 메뉴:** `C:\Windows\Fonts\malgun.ttf`(맑은 고딕)를 프로필의 `fonts` 폴더에 복사하세요.
-   UEVR 메뉴는 그 폴더의 글꼴만 읽어요. 없으면 한글이 `?`로 나와요.
-   (윈도우에 들어 있는 글꼴이라 배포 파일에는 넣지 않았어요.)
-4. 게임을 켜고 UEVR을 주입하세요. 스크립트는 알아서 돌아가고, 메뉴는
+3. 게임을 켜고 UEVR을 주입하세요. 스크립트는 알아서 돌아가고, 메뉴는
    **UEVR 메뉴(Insert) → Script UI → 스타워즈 갤럭틱 레이서 VR**에 있어요.
 
 프로필에는 v1.2.0 프로필의 UEVR 설정·`user_script.txt`·cvars(Nero의 화면 어긋남 수정 포함)와
@@ -117,7 +114,9 @@ joeyhodge, elliotttate, madscy, Nero 정말 고맙습니다. 캐릭터 코드명
 
 이미 잘 되는 프로필이 있으면 원하는 언어 릴리스에서 **`swgr_vr_cockpit.lua`**만 받아서
 프로필의 `scripts` 폴더에 넣고, 거기 있는 예전 콕핏 스크립트(`swgr_cockpit_*.lua`,
-`swgr_stable_camera.lua`)를 지우세요. 같이 돌면 충돌해요. Nero의 화면 어긋남
+`swgr_stable_camera.lua`)를 지우세요. 같이 돌면 충돌해요. 한글 메뉴를 쓰려면 한국어판
+`SWGR-Win64-Shipping.zip` 안의 `fonts` 폴더도 프로필에 복사하세요 (UEVR 메뉴는 그 폴더의 글꼴만
+읽어요. 없으면 한글이 `?`로 나와요). Nero의 화면 어긋남
 수정은 [알아둘 점](#알아둘-점)을 보세요.
 
 ### 3. pak 모드 (선택)
@@ -387,7 +386,7 @@ UEVR 프로필(`%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`) 안:
 | `data/swgr_vr_settings.json` | 공용 설정, 단축키, 바꾼 공용 세부값 |
 | `data/swgr_vr_vehicles.json` | 차량별 값: `eyes`(눈 위치), `feel`(% 세기), `detail`(세부 조절), `pilotFollow`(캐릭터별). 바꾼 것만 들어 있어요. |
 | `data/swgr_vr_views.json` | 직접 저장한 메뉴 화면 위치 |
-| `fonts/malgun.ttf` | 한글 메뉴 글꼴 (직접 복사) |
+| `fonts/NanumGothic-Regular.ttf` | 한글 메뉴 글꼴 (한국어 프로필에만; 나눔고딕, SIL 오픈 폰트 라이선스, `fonts/OFL.txt`) |
 
 `data` 파일을 지우면 기본값부터 다시 시작해요. 로그는 UEVR의 `log.txt`에 `[SWGR VR]`로 시작하는
 줄이에요.
@@ -400,7 +399,7 @@ UEVR 프로필(`%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`) 안:
 src/            스크립트 (부분별: _header, 00_core … 90_menu, _footer), 전부 영어로;
                 lang_ko.lua = 한글 메뉴 문장 (한국어판에만 들어가요)
 profile/        UEVR 프로필 파일 (config, cameras, cvars, user_script, v1.x 검증 노트)
-profile_ko/     한국어 프로필에만 더 들어가는 파일 (글꼴 안내)
+profile_ko/     한국어 프로필에만 더 들어가는 파일 (메뉴 글꼴과 라이선스)
 tests/          run_tests.py + mock.lua: 가짜 게임에서 스크립트 시험
 build.py        dist/EN|KO/swgr_vr_cockpit.lua 빌드, "release"는 배포 파일까지
 ```

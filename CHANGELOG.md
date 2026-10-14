@@ -40,7 +40,7 @@ replaces `swgr_cockpit_camera.lua`.
   Not every vehicle has been tested; adjust to taste.
 - "Add-on effects on" switch: off = behaves like the original v1.2.0 cockpit.
 - Korean / English builds: the code is English only; the Korean build adds the menu text table
-  `lang_ko.lua` (Malgun Gothic loaded from the profile's `fonts` folder),
+  `lang_ko.lua`; the Korean profile ships its menu font (Nanum Gothic, SIL OFL) in `fonts`,
   an explanation on every item, fine tuning grouped by topic, "Saved vehicles" editor.
 - Character display names in the menu (codename → name from the game's RacerDefs).
 

@@ -64,7 +64,7 @@ def release(pak_dir=None):
             shutil.copy(os.path.join(ROOT, f), stage)
         script = build(lang)
         shutil.copy(script, os.path.join(stage, 'scripts', SCRIPT))
-        if lang == 'ko':                   # Korean-only profile files (the font note)
+        if lang == 'ko':                   # Korean-only profile files (the menu font and its license)
             shutil.copytree(os.path.join(ROOT, 'profile_ko'), stage, dirs_exist_ok=True)
         os.makedirs(os.path.join(out, L))
         z = os.path.join(out, L, 'SWGR-Win64-Shipping.zip')

@@ -50,14 +50,16 @@ function V.tip(en)
     if not w then w = wrap(text); tipCache[text] = w end
     pcall(imgui.set_tooltip, w)
 end
--- ImGui's default font has no Hangul: the Korean build loads Malgun Gothic from <profile>\fonts
+-- ImGui's default font has no Hangul: the Korean build loads Nanum Gothic (SIL OFL, shipped in the
+-- Korean profile) from <profile>\fonts
 -- (UEVR's load_font only reads that folder). Without it the menu still works, Hangul shows as '?'.
 V.font = nil
 if V.LANG == 'ko' then
     local ranges = { 0x0020, 0x00FF, 0x2000, 0x206F, 0x2190, 0x21FF, 0x2500, 0x257F, 0x3131, 0x3163, 0xAC00, 0xD7A3, 0 }
-    local ok, font = pcall(function() return imgui.load_font('malgun.ttf', 18, ranges) end)
+    local ok, font = pcall(function() return imgui.load_font('NanumGothic-Regular.ttf', 18, ranges) end)
     V.font = ok and font or nil
-    log('Korean font malgun.ttf: '..(V.font and 'loaded' or 'NOT found (copy C:\\Windows\\Fonts\\malgun.ttf into the profile fonts folder)'))
+    -- (UEVR hands out a font even when the file is missing; then the menu shows '?')
+    log('Korean font NanumGothic-Regular.ttf requested from the profile fonts folder: '..(V.font and 'ok' or 'failed'))
 end
 function V.withFont(fn)
     local pushed = false
