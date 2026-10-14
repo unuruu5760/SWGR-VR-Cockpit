@@ -1,6 +1,6 @@
 # v2.0.0 — 15 October 2026
 
-Integrated release by unuruu5760, built on the v1.2.0 cockpit by elliotttate and madscy,
+Integrated release by ody, built on the v1.2.0 cockpit by elliotttate and madscy,
 Nero's profile tuning and joeyhodge's UEVR backend. One script, `scripts/swgr_vr_cockpit.lua`
 (English or Korean menu), replaces `swgr_cockpit_camera.lua`.
 

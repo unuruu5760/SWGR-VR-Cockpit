@@ -40,7 +40,7 @@ step, each author building on the previous one; v2.0.0 integrates that work with
 | **elliotttate** | The original VR cockpit script: seat anchoring on each vehicle's authored `PilotSeat` socket, the anti-warp horizon, handing the camera back to the game. |
 | **madscy** | Cockpit additions and the v1.x profile: the five camera-lock modes with quaternion smoothing, intro / crash camera handling, the game-camera cycle, the HDR findings, and the design notes. |
 | **Nero** | Profile and `user_script.txt` tuning: Panini / distortion / motion blur / camera shake off, and the stereo-mismatch fixes (SSR, AO, lens flare, SSGI, HDR). |
-| **unuruu5760** | v2.0.0: the integrated script and everything listed below (cockpit feel, boost effects, per-vehicle auto-save, built-in tuning, Korean menu, pak mod). |
+| **ody** | v2.0.0: the integrated script and everything listed below (cockpit feel, boost effects, per-vehicle auto-save, built-in tuning, Korean menu, pak mod). |
 
 The cockpit authors gave permission to integrate and share their work with credit. Thank you,
 joeyhodge, elliotttate, madscy and Nero.
