@@ -97,17 +97,17 @@ joeyhodge, elliotttate, madscy, Nero 정말 고맙습니다. 캐릭터 코드명
 - 한글 메뉴: [**v2.0.0-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.0-ko)
 - 영어 메뉴: [**v2.0.0**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.0)
 
-1. 게임을 끄고 지금 프로필을 **백업**하세요: `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`
+1. 게임을 끄고, 지금 프로필 폴더 `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`를 다른 곳에
+   **백업**(복사)한 다음 **지우세요**. 예전 프로필 위에 그냥 가져오면 예전 스크립트
+   (`swgr_cockpit_camera.lua`, `swgr_stable_camera.lua` 같은 `swgr_cockpit_*.lua`)가 그대로 남아서
+   이 스크립트와 충돌해요.
 2. **`SWGR-Win64-Shipping.zip`**을 UEVR의 **Import Config**로 그대로 가져오거나, zip 안의 내용을
-   `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`에 그대로 푸세요. `data` 같은 폴더는 필요할 때
+   새 `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` 폴더에 푸세요. `data` 같은 폴더는 필요할 때
    UEVR과 스크립트가 알아서 만들어요.
-3. 프로필의 `scripts` 폴더에서 예전 카메라 스크립트를 지우세요: `swgr_cockpit_camera.lua`,
-   `swgr_stable_camera.lua` 같은 `swgr_cockpit_*.lua`. 같이 돌면 서로 싸워요 (남아 있으면
-   메뉴에 경고가 떠요).
-4. **한글 메뉴:** `C:\Windows\Fonts\malgun.ttf`(맑은 고딕)를 프로필의 `fonts` 폴더에 복사하세요.
+3. **한글 메뉴:** `C:\Windows\Fonts\malgun.ttf`(맑은 고딕)를 프로필의 `fonts` 폴더에 복사하세요.
    UEVR 메뉴는 그 폴더의 글꼴만 읽어요. 없으면 한글이 `?`로 나와요.
    (윈도우에 들어 있는 글꼴이라 배포 파일에는 넣지 않았어요.)
-5. 게임을 켜고 UEVR을 주입하세요. 스크립트는 알아서 돌아가고, 메뉴는
+4. 게임을 켜고 UEVR을 주입하세요. 스크립트는 알아서 돌아가고, 메뉴는
    **UEVR 메뉴(Insert) → Script UI → 스타워즈 갤럭틱 레이서 VR**에 있어요.
 
 프로필에는 v1.2.0 프로필의 UEVR 설정·`user_script.txt`·cvars(Nero의 화면 어긋남 수정 포함)와
@@ -116,7 +116,8 @@ joeyhodge, elliotttate, madscy, Nero 정말 고맙습니다. 캐릭터 코드명
 ### 2. 스크립트만
 
 이미 잘 되는 프로필이 있으면 원하는 언어 릴리스에서 **`swgr_vr_cockpit.lua`**만 받아서
-프로필의 `scripts` 폴더에 넣고, 예전 콕핏 스크립트를 지우세요 (위 3번). Nero의 화면 어긋남
+프로필의 `scripts` 폴더에 넣고, 거기 있는 예전 콕핏 스크립트(`swgr_cockpit_*.lua`,
+`swgr_stable_camera.lua`)를 지우세요. 같이 돌면 충돌해요. Nero의 화면 어긋남
 수정은 [알아둘 점](#알아둘-점)을 보세요.
 
 ### 3. pak 모드 (선택)

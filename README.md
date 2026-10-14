@@ -100,18 +100,17 @@ UEVR needs, so there is nothing to rename:
 - English menu: [**v2.0.0**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.0)
 - Korean menu: [**v2.0.0-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.0-ko)
 
-1. Close the game and **back up** your current profile:
-   `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`
+1. Close the game, **back up** your current profile folder
+   `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` (copy it somewhere else) and then **delete it**.
+   Importing on top of an old profile keeps its old scripts (`swgr_cockpit_camera.lua`,
+   `swgr_stable_camera.lua`, other `swgr_cockpit_*.lua`), and they fight with this one.
 2. Import **`SWGR-Win64-Shipping.zip`** with UEVR's **Import Config** as it is, or extract its
-   contents straight into `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`. Folders such as `data`
-   are created by UEVR and the script when needed.
-3. Remove older camera scripts from the profile's `scripts` folder — `swgr_cockpit_camera.lua`,
-   `swgr_stable_camera.lua` and other `swgr_cockpit_*.lua`. They fight with this one (the menu
-   warns you if one is still there).
-4. **Korean menu only:** copy `C:\Windows\Fonts\malgun.ttf` into the profile's `fonts` folder.
+   contents into a new `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`. Folders such as `data` are
+   created by UEVR and the script when needed.
+3. **Korean menu only:** copy `C:\Windows\Fonts\malgun.ttf` into the profile's `fonts` folder.
    UEVR loads menu fonts only from there; without it the Korean text shows as `?`.
    (The font is part of Windows and is not redistributed here.)
-5. Start the game and inject UEVR. The script runs by itself; its menu is in
+4. Start the game and inject UEVR. The script runs by itself; its menu is in
    **UEVR menu (Insert) → Script UI → STAR WARS Galactic Racer VR**.
 
 The profile contains the UEVR settings, `user_script.txt` and the cvars of the v1.2.0 profile
@@ -120,7 +119,8 @@ with Nero's stereo-mismatch fixes, plus the script.
 ### 2. Script only
 
 Already have a working profile? Download **`swgr_vr_cockpit.lua`** from the release of your
-language, put it in the profile's `scripts` folder and remove the older cockpit scripts (step 3 above).
+language, put it in the profile's `scripts` folder and remove the older cockpit scripts there
+(`swgr_cockpit_*.lua`, `swgr_stable_camera.lua`) — they fight with this one.
 For Nero's stereo-mismatch fixes, see [Known issues and notes](#known-issues-and-notes).
 
 ### 3. Pak mod (optional)
