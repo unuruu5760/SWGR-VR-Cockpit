@@ -1,0 +1,2 @@
+Core_r.MaxAnisotropy=10
+Renderer_r.Upscale.Quality=1
