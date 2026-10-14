@@ -6,10 +6,9 @@ local log = V.logger('nearclip')
 local S = V.cam
 local MIN_NEAR = 3.0
 -- the cut distance: set in the View menu for the vehicle driven (untouched = the shared value)
-V.tunable('view', 'near', 10.0, 3, 30, 'Cut distance (cm)', '안 그리는 거리 (cm)',
-    'Nothing closer to your eyes than this is drawn, so you don\'t see the inside of the pilot body. Dashboard or hands cut away: lower it. Inside of the body visible: raise it.',
-    '눈에서 이 거리보다 가까운 건 안 그려서 조종사 몸통 안쪽이 안 보여요. 계기판이나 손이 잘려 보이면 낮추고, 몸통 안쪽이 보이면 올리세요.').main = true
-V.tunable('view', 'nearLow', 5.0, 0, 20, 'Landing: extra cut (cm)', '착지 때 더 안 그리기 (cm)', 'Only while a landing presses the view down: this much is added to the "Cut distance", so even more right in front of your eyes is not drawn (hides the inside of the pilot body). Inside of the body visible on landings: raise it. Dashboard / hands vanish for a moment on landings: lower it. 0 = no extra cut.', '착지로 시점이 아래로 눌릴 때만, "안 그리는 거리"에 이만큼 더해서 눈앞을 더 넓게 안 그려요 (몸통 안쪽이 안 보이게). 착지 순간 몸통 안쪽이 보이면 올리고, 계기판·손이 잠깐 사라지면 내리세요. 0 = 착지 때도 더 안 자름.')
+V.tunable('view', 'near', 10.0, 3, 30, 'Cut distance (cm)',
+    'Nothing closer to your eyes than this is drawn, so you don\'t see the inside of the pilot body. Dashboard or hands cut away: lower it. Inside of the body visible: raise it.').main = true
+V.tunable('view', 'nearLow', 5.0, 0, 20, 'Landing: extra cut (cm)', 'Only while a landing presses the view down: this much is added to the "Cut distance", so even more right in front of your eyes is not drawn (hides the inside of the pilot body). Inside of the body visible on landings: raise it. Dashboard / hands vanish for a moment on landings: lower it. 0 = no extra cut.')
 -- older data had one shared value per vehicle type. A vehicle's own type value becomes its own
 -- value; a type value the user had changed (more than 1 cm from the new shared default) is kept for
 -- the saved vehicles of that type; everything else follows the shared value.

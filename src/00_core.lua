@@ -10,9 +10,11 @@ V.logger = logger
 local log = logger('core')
 
 -------------------------------------------------------------------------------- language
--- One build per language (LANG at the top of the file). tr(en, kr) picks the text.
-function V.tr(en, kr)
-    if V.LANG == 'ko' and kr then return kr end
+-- The code is written in English. The Korean build adds V.KO (lang_ko.lua: English text -> Korean)
+-- and tr(text) looks the text up there; anything missing stays English.
+V.KO = V.KO or {}
+function V.tr(en)
+    if V.LANG == 'ko' then return V.KO[en] or en end
     return en
 end
 -- Tooltips are wrapped into short lines (ImGui doesn't wrap them: one long line runs off the
@@ -40,10 +42,10 @@ end
 V.wrap = wrap
 local tipCache = {}
 -- description shown while the pointer is over the last item
-function V.tip(en, kr)
+function V.tip(en)
     local ok, hov = pcall(imgui.is_item_hovered)
     if not (ok and hov) then return end
-    local text = V.tr(en, kr)
+    local text = V.tr(en)
     local w = tipCache[text]
     if not w then w = wrap(text); tipCache[text] = w end
     pcall(imgui.set_tooltip, w)
@@ -114,15 +116,9 @@ end
 -------------------------------------------------------------------------------- fine tuning
 -- Every value a section uses is registered here with its recommended value and range; the
 -- "Fine tuning" menu lists them. V.val(key) = the user's value or the recommended one.
-V.TUNE_SECTIONS = {
-    { 'feel', 'Cockpit shake', '흔들림' },
-    { 'boost', 'Boost effects', '부스터 연출' },
-    { 'view', 'View', '시점' },
-    { 'start', 'Race start', '레이스 시작' },
-}
 V.TUNABLES, V.TUNE_INDEX = {}, {}
-function V.tunable(sec, key, base, lo, hi, en, kr, tipEn, tipKr)
-    local item = { sec = sec, key = key, base = base, lo = lo, hi = hi, en = en, kr = kr, tipEn = tipEn, tipKr = tipKr }
+function V.tunable(sec, key, base, lo, hi, en, tipEn)
+    local item = { sec = sec, key = key, base = base, lo = lo, hi = hi, en = en, tipEn = tipEn }
     V.TUNABLES[#V.TUNABLES + 1] = item
     V.TUNE_INDEX[key] = item
     return item

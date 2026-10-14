@@ -29,10 +29,10 @@ V.HOTKEY_PADS = {
     { 'Back + RB', 0x0200 },
 }
 V.HOTKEY_ACTIONS = {
-    { id = 'Toggle', en = 'Cockpit <-> game cameras', kr = '콕핏 <-> 게임 카메라' },
-    { id = 'Cycle', en = 'Next game camera', kr = '다음 게임 카메라' },
-    { id = 'Recenter', en = 'Recenter head at the seat', kr = '머리 위치 다시 맞추기' },
-    { id = 'Extras', en = 'Add-on effects on / off (compare with the original)', kr = '추가 기능 켜기/끄기 (원본과 비교)' },
+    { id = 'Toggle', en = 'Cockpit <-> game cameras' },
+    { id = 'Cycle', en = 'Next game camera' },
+    { id = 'Recenter', en = 'Recenter head at the seat' },
+    { id = 'Extras', en = 'Add-on effects on / off (compare with the original)' },
 }
 local function padMask(name)
     for _, p in ipairs(V.HOTKEY_PADS) do if p[1] == name then return p[2] end end
@@ -114,6 +114,6 @@ function V.hotkeyText(id)
     local parts = {}
     if k and k ~= 'None' then parts[#parts + 1] = k end
     if p and p ~= 'None' then parts[#parts + 1] = p end
-    if #parts == 0 then return V.tr('none', '없음') end
+    if #parts == 0 then return V.tr('none') end
     return table.concat(parts, ' / ')
 end

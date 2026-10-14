@@ -2,12 +2,10 @@
 -- view roll is changed, with a soft maximum: view roll = % * MAX * tanh(roll * amount / MAX).
 -- Menu: "Banking" % right in the View menu, saved per vehicle. 100 = the lean set by the two values
 -- below, 50 = half of that everywhere, 0 = always level.
-V.tunable('view', 'rollAmount', 0.65, 0, 1.5, 'Banking amount (at Banking 100)', '기울기 비율 (기울기 100일 때)',
-    'How much of the vehicle\'s lean the view follows in normal turns when "Banking" is 100. 1 = exactly as much as the vehicle.',
-    '"기울기"가 100일 때, 보통 코너에서 차가 기운 만큼 시점이 따라 기우는 비율. 1이면 차와 똑같이.')
-V.tunable('view', 'rollMax', 50.92, 5, 90, 'Banking maximum (degrees, at Banking 100)', '최대 기울기 (도, 기울기 100일 때)',
-    'When "Banking" is 100 the view never leans more than this, however hard the vehicle banks (soft limit).',
-    '"기울기"가 100일 때, 차가 아무리 기울어도 시점은 이 각도 이상 기울지 않아요 (부드러운 한계).')
+V.tunable('view', 'rollAmount', 0.65, 0, 1.5, 'Banking amount (at Banking 100)',
+    'How much of the vehicle\'s lean the view follows in normal turns when "Banking" is 100. 1 = exactly as much as the vehicle.')
+V.tunable('view', 'rollMax', 50.92, 5, 90, 'Banking maximum (degrees, at Banking 100)',
+    'When "Banking" is 100 the view never leans more than this, however hard the vehicle banks (soft limit).')
 -- older data had other recommended values: drop the old shared ones, and a vehicle's own ones that
 -- equal the new defaults, so "Banking 100" means the new defaults everywhere
 if V.migrating then

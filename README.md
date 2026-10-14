@@ -415,14 +415,16 @@ start with `[SWGR VR]`.
 ## Building from source
 
 ```
-src/            the script, in sections (_header, 00_core … 90_menu, _footer)
+src/            the script, in sections (_header, 00_core … 90_menu, _footer), all in English;
+                lang_ko.lua = the Korean menu text, added only to the Korean build
 profile/        the UEVR profile files (config, cameras, cvars, user_script, v1.x validation notes)
 tests/          run_tests.py + mock.lua: the script against a fake game
 build.py        builds dist/EN|KO/swgr_vr_cockpit.lua; "release" builds the packages
 ```
 
 - `python build.py` → `dist/EN/swgr_vr_cockpit.lua`, `dist/KO/swgr_vr_cockpit.lua`.
-  Each `src/NN_*.lua` is wrapped in `do … end`.
+  Each `src/NN_*.lua` is wrapped in `do … end`. The English build contains no Korean at all; the
+  Korean build is the same code plus `lang_ko.lua`.
 - `python build.py release [PAK_DIR]` → `release/EN/` and `release/KO/`, each with
   `SWGR-Win64-Shipping.zip` (the profile) and `swgr_vr_cockpit.lua`, and (with `PAK_DIR`) the
   pak mod zip in `release/`.
@@ -434,11 +436,17 @@ build.py        builds dist/EN|KO/swgr_vr_cockpit.lua; "release" builds the pack
   LuaJIT's `lua51.dll` next to it (not included; e.g. the one shipped with OBS Studio). LuaJIT is
   Lua 5.1, so the script avoids 5.3+ operators.
 
+**Menu text** — write English in the code: `tr('Text')` for labels, `tip('Text')` for tooltips,
+`help('Text')` for notes. In the Korean build `tr` looks the text up in `lang_ko.lua`
+(`['Text'] = '…'`); text without an entry simply stays English, so a missing translation never
+breaks anything.
+
 **Adding a value** — register it where it is used: `V.tunable(section, key, recommended, min,
-max, english, korean, tipEnglish, tipKorean)`; read it with `V.val(key)` (the current vehicle's
-value, else its defaults). Add the key to `TUNE_LAYOUT` in `90_menu.lua` so it shows under the
-right topic (anything not listed shows under "Other"). Write the explanation for someone who
-has never seen the menu: what it feels like, when to raise or lower it, what 0 does.
+max, label, tooltip)`; read it with `V.val(key)` (the current vehicle's value, else its
+defaults). Add the key to `TUNE_LAYOUT` in `90_menu.lua` so it shows under the right topic
+(anything not listed shows under "Other"), and the label / tooltip to `lang_ko.lua` for Korean.
+Write the explanation for someone who has never seen the menu: what it feels like, when to raise
+or lower it, what 0 does.
 
 **Design notes** from v1.2.0 still hold for the cockpit section (`10_cockpit.lua`): seat
 anchoring on `PilotSeat`, one rotation function (`cameraRotation`) for headset and desktop view,

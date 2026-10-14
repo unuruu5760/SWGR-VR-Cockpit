@@ -39,7 +39,8 @@ replaces `swgr_cockpit_camera.lua`.
   Merlin, Plane: Myth), eye positions for 11 vehicles, per-character body follow on bikes.
   Not every vehicle has been tested; adjust to taste.
 - "Add-on effects on" switch: off = behaves like the original v1.2.0 cockpit.
-- Korean / English menu (Malgun Gothic loaded from the profile's `fonts` folder for Korean),
+- Korean / English builds: the code is English only; the Korean build adds the menu text table
+  `lang_ko.lua` (Malgun Gothic loaded from the profile's `fonts` folder),
   an explanation on every item, fine tuning grouped by topic, "Saved vehicles" editor.
 - Character display names in the menu (codename → name from the game's RacerDefs).
 

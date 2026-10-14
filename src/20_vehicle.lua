@@ -4,15 +4,13 @@ local log = V.logger('vehicle')
 local S = V.cam
 
 V.TYPES = { 'Bike', 'Car', 'Skimmer', 'Plane' }
-V.TYPE_NAMES = { Bike = { 'Bike', '바이크' }, Car = { 'Car', '자동차' }, Skimmer = { 'Skimmer', '스키머' }, Plane = { 'Plane', '비행기형' } }
+V.TYPE_NAMES = { Bike = { 'Bike' }, Car = { 'Car' }, Skimmer = { 'Skimmer' }, Plane = { 'Plane' } }
 -- body follow on jumps (bikes: the rider stands up): how much the eye follows the pilot chest up /
 -- forward. Set in the View menu for the vehicle driven (not listed in "Fine tuning").
-V.tunable('view', 'followUp', 0.74, 0, 3, 'Jumps: up with the pilot', '점프 때 몸 따라 위로',
-    'How much your eyes rise with the pilot\'s chest on jumps. 1 = exactly as much, 0 = not at all, above 1 = even more than the chest. Still inside the body: raise it. Too high: lower it.',
-    '점프 때 조종사 가슴이 올라가는 만큼 눈이 같이 올라가는 정도. 1 = 똑같이, 0 = 안 올라감, 1보다 크면 가슴보다 더 많이. 아직 몸통에 박히면 올리고, 너무 뜨면 내리세요.').main = true
-V.tunable('view', 'followFwd', 0.0, -1, 3, 'Jumps: forward with the pilot', '점프 때 몸 따라 앞으로',
-    'How much your eyes move forward with the pilot on jumps. Above 1 = even more than the pilot. Dashboard too close in the air: lower it, below 0 the eyes even move back.',
-    '점프 때 조종사가 앞으로 쏠리는 만큼 눈이 같이 앞으로 가는 정도. 1보다 크면 조종사보다 더 많이. 공중에서 계기판이 너무 가까우면 내리세요. 0보다 낮으면 오히려 뒤로 빠져요.').main = true
+V.tunable('view', 'followUp', 0.74, 0, 3, 'Jumps: up with the pilot',
+    'How much your eyes rise with the pilot\'s chest on jumps. 1 = exactly as much, 0 = not at all, above 1 = even more than the chest. Still inside the body: raise it. Too high: lower it.').main = true
+V.tunable('view', 'followFwd', 0.0, -1, 3, 'Jumps: forward with the pilot',
+    'How much your eyes move forward with the pilot on jumps. Above 1 = even more than the pilot. Dashboard too close in the air: lower it, below 0 the eyes even move back.').main = true
 local FOLLOW_MAX = 60                      -- cm, the most the eye moves with the body (per axis)
 -- older vehicle files kept body follow apart ({ up, forward }): move what differs from the shared value
 if V.oldFollow then

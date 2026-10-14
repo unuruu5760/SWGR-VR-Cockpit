@@ -14,69 +14,64 @@ local vr = uevr.params.vr
 -- MASTER multiplies most values (kept as tuned, not shown: the menu's % are relative to it)
 local MASTER = 3.0
 -- the five menu groups and the fine-tuning values in each (recommended value, range)
-local function T(key, base, hi, en, kr, tipEn, tipKr) V.tunable('feel', key, base, 0, hi, en, kr, tipEn, tipKr); return key end
+local function T(key, base, hi, en, tipEn) V.tunable('feel', key, base, 0, hi, en, tipEn); return key end
 local GROUPS = {
     engine = {
-        T('idle', 0.594, 3, 'Engine idle (standing)', '공회전 (정지 중)', 'How much the cockpit trembles from the engine while you stand still (before the start). 0 = no trembling.', '멈춰 서 있을 때(출발 전 등) 엔진 때문에 콕핏이 잔잔하게 떨리는 정도. 0 = 안 떨림.'),
-        T('idleRev', 1.0, 3, 'Revving with W (standing)', '정지 중 부릉 (W)', 'The heavy throb when you press W while standing still (revving before the start). 0 = no throb.', '서 있는 상태에서 W를 밟아 엔진을 부릉부릉할 때 굵게 떨리는 정도 (출발 전 공회전). 0 = 안 떨림.'),
-        T('cruise', 1.041, 3, 'Engine while driving', '주행 중 엔진', 'Engine trembling while you drive. 0 = none.', '달리는 동안 엔진 때문에 잔잔하게 떨리는 정도. 0 = 안 떨림.'),
+        T('idle', 0.594, 3, 'Engine idle (standing)', 'How much the cockpit trembles from the engine while you stand still (before the start). 0 = no trembling.'),
+        T('idleRev', 1.0, 3, 'Revving with W (standing)', 'The heavy throb when you press W while standing still (revving before the start). 0 = no throb.'),
+        T('cruise', 1.041, 3, 'Engine while driving', 'Engine trembling while you drive. 0 = none.'),
     },
     road = {
-        T('road', 0.731, 3, 'Road rumble', '노면 진동', 'Fine rumble from the ground while driving: grows with speed, stops in the air. Too buzzy at high speed: lower it. 0 = none.', '땅 위를 달릴 때 바닥에서 올라오는 잔진동. 빠를수록 커지고 공중에선 없어요. 고속에서 너무 자글거리면 낮추세요. 0 = 없음.'),
-        T('bumps', 0.96, 3, 'Ups and downs (terrain)', '위아래 출렁임 (지형)', 'When the track goes up and down, your head lags a little behind and bobs, like in a real vehicle. Feels floaty or sickening: lower it. 0 = the head moves exactly with the vehicle.', '길이 오르락내리락할 때 머리가 살짝 늦게 따라가며 위아래로 출렁이는 정도 (진짜 차처럼). 울렁거리거나 멀미 나면 낮추세요. 0 = 차와 똑같이 움직임.'),
+        T('road', 0.731, 3, 'Road rumble', 'Fine rumble from the ground while driving: grows with speed, stops in the air. Too buzzy at high speed: lower it. 0 = none.'),
+        T('bumps', 0.96, 3, 'Ups and downs (terrain)', 'When the track goes up and down, your head lags a little behind and bobs, like in a real vehicle. Feels floaty or sickening: lower it. 0 = the head moves exactly with the vehicle.'),
     },
     motion = {
-        T('accel', 0.0, 3, 'Acceleration push', '가속 쏠림', 'Your head is pushed back when you speed up and forward when you slow down. Off by default (0).', '가속하면 머리가 뒤로, 감속하면 앞으로 쏠리는 정도. 기본값은 0(꺼짐).'),
-        T('corner', 0.2, 3, 'Corner push', '코너 쏠림', 'Your head is pushed to the outside in corners. Higher = bigger sway in turns. 0 = none.', '코너를 돌 때 머리가 바깥쪽으로 쏠리는 정도. 높을수록 코너에서 크게 휘청. 0 = 없음.'),
-        T('drift', 3.0, 3, 'Drift rumble', '드리프트 떨림', 'The cockpit rattles while you drift (Space). 0 = none.', '드리프트(스페이스바)하는 동안 콕핏이 드르륵 떨리는 정도. 0 = 없음.'),
-        T('draft', 2.334, 3, 'Slipstream buffeting', '슬립스트림 난기류', 'Right behind another racer (slipstream) the air makes you sway left and right. 0 = none.', '다른 레이서 바로 뒤(슬립스트림)에 붙었을 때 공기 때문에 좌우로 휘청이는 정도. 0 = 없음.'),
+        T('accel', 0.0, 3, 'Acceleration push', 'Your head is pushed back when you speed up and forward when you slow down. Off by default (0).'),
+        T('corner', 0.2, 3, 'Corner push', 'Your head is pushed to the outside in corners. Higher = bigger sway in turns. 0 = none.'),
+        T('drift', 3.0, 3, 'Drift rumble', 'The cockpit rattles while you drift (Space). 0 = none.'),
+        T('draft', 2.334, 3, 'Slipstream buffeting', 'Right behind another racer (slipstream) the air makes you sway left and right. 0 = none.'),
     },
     boost = {
-        T('afterburner', 1.427, 3, 'Afterburner', '애프터버너', 'Afterburner (Shift): how hard the view lunges forward when it fires, and the hum / shaking while it burns. 0 = no afterburner effect.', '애프터버너(Shift)를 켤 때 시점이 앞으로 튀어나가는 돌진과, 켜진 동안의 웅웅·흔들림 세기. 0 = 애프터버너 때 아무 연출 없음.'),
-        T('ramjet', 2.466, 3, 'Ramjet', '램젯', 'Ramjet (C): the big forward lunge and long rumble when it ignites. 0 = no ramjet lunge / rumble.', '램젯(C)이 점화될 때 크게 앞으로 튀어나가고 길게 우르릉 울리는 세기. 0 = 램젯 때 돌진·울림 없음.'),
-        T('launch', 1.0, 3, 'Race start launch', '출발 런치', 'The forward lunge at the moment the race starts, bigger with a perfect start. 0 = no start lunge.', '레이스 출발 순간 앞으로 튀어나가는 세기. 퍼펙트 스타트일수록 크게. 0 = 출발 연출 없음.'),
-        T('nod', 3.0, 3, 'Nose lift', '기수 들림', 'On boosts the view tilts up a little (the nose lifts), on landings it nods down. 0 = the view angle never changes (only the position moves).', '부스터 때 시점이 살짝 위로 들리고(차 앞이 들리는 느낌), 착지 때 아래로 꾸벅하는 정도. 0 = 시점 각도는 안 바뀜 (위치만 움직임).'),
-        T('lowHum', 1.013, 3, 'Low hum while boosting', '부스터 저음 웅웅', 'A deep, slow hum you feel while the ramjet / afterburner is burning. 0 = none.', '램젯·애프터버너가 켜져 있는 동안 묵직하게 웅웅 울리는 느린 떨림. 0 = 없음.'),
-        T('heatShake', 1.0, 3, 'Overheating shudder', '과열 흔들림', 'Heavy shaking that grows the hotter the ramjet gets (wild at the warning stage). 0 = none.', '램젯을 오래 써서 과열될수록 커지는 굵은 흔들림 (경고 단계에서 크게 요동). 0 = 없음.'),
-        T('ebrake', 0.0, 3, 'Energy brake', '에너지 브레이크', 'Thrown forward when you use the energy brake. Off by default (0).', '에너지 브레이크를 쓸 때 앞으로 쏠리는 정도. 기본값은 0(꺼짐).'),
+        T('afterburner', 1.427, 3, 'Afterburner', 'Afterburner (Shift): how hard the view lunges forward when it fires, and the hum / shaking while it burns. 0 = no afterburner effect.'),
+        T('ramjet', 2.466, 3, 'Ramjet', 'Ramjet (C): the big forward lunge and long rumble when it ignites. 0 = no ramjet lunge / rumble.'),
+        T('launch', 1.0, 3, 'Race start launch', 'The forward lunge at the moment the race starts, bigger with a perfect start. 0 = no start lunge.'),
+        T('nod', 3.0, 3, 'Nose lift', 'On boosts the view tilts up a little (the nose lifts), on landings it nods down. 0 = the view angle never changes (only the position moves).'),
+        T('lowHum', 1.013, 3, 'Low hum while boosting', 'A deep, slow hum you feel while the ramjet / afterburner is burning. 0 = none.'),
+        T('heatShake', 1.0, 3, 'Overheating shudder', 'Heavy shaking that grows the hotter the ramjet gets (wild at the warning stage). 0 = none.'),
+        T('ebrake', 0.0, 3, 'Energy brake', 'Thrown forward when you use the energy brake. Off by default (0).'),
     },
     landing = {
-        T('landing', 0.562, 3, 'Landing', '착지', 'After a jump the view is pressed down when you land, then comes back up; deeper after longer jumps (never below "Lowest point below normal"). 0 = not pressed down.', '점프 후 착지할 때 시점이 아래로 쿵 눌렸다가 올라오는 깊이. 오래 날았을수록 깊게 ("착지 때 최대 깊이"보다 깊이는 안 내려가요). 0 = 안 눌림.'),
-        T('impact', 1.0, 3, 'Impacts', '충돌', 'When you hit a wall or another racer the view is knocked the other way. 0 = none.', '벽이나 다른 차에 부딪힐 때 시점이 반대쪽으로 덜컥 튕기는 세기. 0 = 없음.'),
-        T('landHit', 3.83, 6, 'Landing hit (thud at touchdown)', '착지 순간 쿵',
-          'The short sharp hit at the moment you touch down, harder after longer jumps. Not limited by the lowest point, so it is always felt.',
-          '땅에 닿는 순간의 짧고 강한 충격. 오래 날았을수록 세게. "착지 때 최대 깊이" 제한을 받지 않아서 항상 느껴져요.'),
+        T('landing', 0.562, 3, 'Landing', 'After a jump the view is pressed down when you land, then comes back up; deeper after longer jumps (never below "Lowest point below normal"). 0 = not pressed down.'),
+        T('impact', 1.0, 3, 'Impacts', 'When you hit a wall or another racer the view is knocked the other way. 0 = none.'),
+        T('landHit', 3.83, 6, 'Landing hit (thud at touchdown)',
+          'The short sharp hit at the moment you touch down, harder after longer jumps. Not limited by the lowest point, so it is always felt.'),
     },
 }
 V.FEEL_GROUPS = { 'engine', 'road', 'motion', 'boost', 'landing' }
 -- values not in a group (fine tuning only)
-V.tunable('feel', 'springHz', 3.888, 1, 8, 'Spring speed (Hz)', '스프링 속도 (Hz)', 'All the shaking moves your head on a "spring". This is how fast that spring is: low = big slow sways, high = short tight jolts. Usually no need to touch it.', '흔들림 연출은 전부 머리를 "스프링"처럼 움직여요. 그 스프링의 빠르기: 낮으면 크고 느리게 출렁, 높으면 짧고 단단하게 툭. 보통은 건드릴 필요 없어요.')
-V.tunable('feel', 'landHitHz', 5.5, 4, 20, 'Landing hit sharpness (Hz)', '착지 쿵 날카로움 (Hz)', 'The feel of the "Landing hit": higher = a short sharp thud, lower = a softer, longer thump.', '"착지 순간 쿵"의 느낌. 높을수록 짧고 날카로운 쿵, 낮을수록 부드럽고 길게 꿀렁.')
+V.tunable('feel', 'springHz', 3.888, 1, 8, 'Spring speed (Hz)', 'All the shaking moves your head on a "spring". This is how fast that spring is: low = big slow sways, high = short tight jolts. Usually no need to touch it.')
+V.tunable('feel', 'landHitHz', 5.5, 4, 20, 'Landing hit sharpness (Hz)', 'The feel of the "Landing hit": higher = a short sharp thud, lower = a softer, longer thump.')
 -- Landing head hit (menu: Cockpit shake): a landing hits your head. Moving the view's position reads in
 -- VR as the vehicle moving (your real head stays still); turning the view's angle reads as your
 -- head moving (like the nose lift). So at touchdown the view angle snaps down and back and wobbles
 -- sideways a little, on a stiff spring of its own, on top of the usual press down.
-V.tunable('feel', 'headHitPitch', 3.0, 0, 12, 'Head hit: snap down (degrees)', '머리 충격: 아래로 숙여짐 (도)',
-    'How far your view snaps down at the moment you land, harder after longer jumps and with a higher "Landings and hits". 0 = no snap.',
-    '착지 순간 시점이 아래로 툭 숙여지는 각도. 오래 날수록, "착지·충돌"이 높을수록 커요. 0 = 안 숙여짐.')
-V.tunable('feel', 'headHitRoll', 1.5, 0, 8, 'Head hit: side wobble (degrees)', '머리 충격: 좌우 흔들림 (도)',
-    'How much your view wobbles sideways at the landing (a different side each time). 0 = none.',
-    '착지 순간 시점이 좌우로 흔들리는 각도 (매번 방향이 달라요). 0 = 없음.')
-V.tunable('feel', 'headHitHz', 7.0, 3, 15, 'Head hit: sharpness (Hz)', '머리 충격: 빠르기 (Hz)',
-    'Higher = a short sharp knock, lower = a slower, heavier sway.',
-    '높을수록 짧고 날카롭게 탁, 낮을수록 느리고 묵직하게 휘청.')
-V.tunable('feel', 'damping', 0.387, 0.1, 1, 'Spring damping', '스프링 감쇠', 'How quickly the spring settles: low = after a move the head bounces a few more times, high = it stops at once. Usually no need to touch it.', '스프링이 얼마나 빨리 멈추는지. 낮으면 한 번 움직인 뒤 통통 몇 번 더 튀고, 높으면 한 번에 멈춰요. 보통은 건드릴 필요 없어요.')
-V.tunable('feel', 'fwdScale', 0.5, 0, 1.5, 'Forward lunges (dashboard close)', '앞으로 돌진 배율', 'How far boost and start lunges move the view forward, toward the dashboard. You end up in the dashboard (bikes): lower it. 0 = never forward (only the other movements).', '부스터·출발 돌진 때 시점이 앞(계기판 쪽)으로 다가가는 정도. 바이크처럼 계기판에 박히면 낮추세요. 0 = 앞으로는 안 감 (다른 움직임만).')
-V.tunable('feel', 'landLean', 0.286, 0, 1.5, 'Lean forward on landings', '착지 때 앞으로 숙이기', 'While a landing presses the view down it also leans forward by this much. You sink into the pilot body on landings: raise it (the eye dodges forward). 0 = straight down only.', '착지로 시점이 눌릴 때 앞으로도 같이 숙이는 정도. 착지 때 조종사 몸통 속으로 들어가면 올리세요 (눈이 앞으로 피함). 0 = 아래로만 눌림.')
-V.tunable('feel', 'airLift', 5.0, 0, 15, 'Rise in the air (cm)', '공중에서 시점 올리기 (cm)', 'While airborne the view rises by this much, then comes down with the landing, so the landing feels bigger. 0 = stays at the normal height in the air.', '공중에 떠 있는 동안 시점을 이만큼 살짝 올렸다가, 착지할 때 같이 내려와요 (착지 느낌이 커짐). 0 = 공중에서도 평소 높이 그대로.')
-V.tunable('feel', 'lungeMax', 12.5, 5, 60, 'Lunges: farthest forward (cm)', '돌진 최대 거리 (cm)',
-    'How far forward the view may go on boost and start lunges (and when it leans forward on landings). The lunge goes out to here and stays a moment, so this is how far the boost throws you. Raise it for a bigger lunge; lower it if you end up in the dashboard. 12.5 = as before.',
-    '부스터·출발 돌진 때 (착지 때 앞으로 숙일 때도) 시점이 앞으로 갈 수 있는 최대 거리. 돌진은 여기까지 나가서 잠깐 머물러서, 이 값이 곧 부스터가 앞으로 밀어주는 거리예요. 더 크게 하려면 올리고, 계기판에 박히면 낮추세요. 12.5 = 예전과 같음.')
-V.tunable('feel', 'landFloor', 8.29, 0, 15, 'Lowest point below normal (cm)', '착지 때 최대 깊이 (cm)', 'How far below your normal eye height a landing may press the view. You see inside the pilot body or it is too deep: lower it. Landings feel weak: raise it. 0 = never below the normal height.', '착지로 눌릴 때 평소 눈 높이보다 최대 몇 cm까지 내려갈지. 몸통 안쪽이 보이거나 너무 깊으면 낮추고, 착지가 약하게 느껴지면 올리세요. 0 = 평소 높이 아래로는 안 내려감.')
-V.tunable('boost', 'hitstopStrength', 0.333, 0, 1, 'Hit-stop strength (ramjet / start)', '순간 멈칫 세기 (램젯·출발)', 'At ramjet ignition and the race start the whole game slows down for a split second (when "Hit-stop" is ticked). 1 = down to about a quarter speed. 0 = no slow-down.', '램젯 점화·레이스 출발 순간 게임 전체가 아주 잠깐 느려지는 세기 ("순간 멈칫" 체크가 켜져 있을 때). 1 = 약 4분의 1 속도까지. 0 = 안 느려짐.')
-V.tunable('boost', 'hitstopAB', 0.077, 0, 1, 'Hit-stop strength (afterburner)', '순간 멈칫 세기 (애프터버너)', 'The same split-second slow-down for the afterburner lunge; very light by default. 0 = none.', '애프터버너 돌진 때의 순간 멈칫 세기. 기본은 아주 약하게. 0 = 없음.')
-V.tunable('boost', 'hitstopTime', 0.164, 0.05, 0.4, 'Hit-stop length (s)', '순간 멈칫 길이 (초)', 'How long the slow-down lasts (seconds). Longer = a longer "freeze".', '순간 멈칫으로 느려져 있는 시간(초). 길수록 멈칫이 길게 느껴져요.')
-V.tunable('boost', 'warpAmount', 3.0, -5, 5, 'Warp pulse strength (+ / -)', '세상 출렁 세기 (+ / -)', 'At ramjet ignition and the race start the size of the world pulses for a moment (when "Warp pulse" is ticked). Plus = the world briefly shrinks and moves away, minus = it briefly grows and rushes at you. Further from 0 = stronger. 0 = no pulse.', '램젯 점화·출발 순간 세상 크기가 잠깐 출렁이는 세기 ("세상 출렁" 체크가 켜져 있을 때). 플러스 = 세상이 잠깐 작아지며 멀어지는 쪽, 마이너스 = 세상이 잠깐 커지며 확 다가오는 쪽. 0에서 멀수록 세게. 0 = 안 출렁임.')
+V.tunable('feel', 'headHitPitch', 3.0, 0, 12, 'Head hit: snap down (degrees)',
+    'How far your view snaps down at the moment you land, harder after longer jumps and with a higher "Landings and hits". 0 = no snap.')
+V.tunable('feel', 'headHitRoll', 1.5, 0, 8, 'Head hit: side wobble (degrees)',
+    'How much your view wobbles sideways at the landing (a different side each time). 0 = none.')
+V.tunable('feel', 'headHitHz', 7.0, 3, 15, 'Head hit: sharpness (Hz)',
+    'Higher = a short sharp knock, lower = a slower, heavier sway.')
+V.tunable('feel', 'damping', 0.387, 0.1, 1, 'Spring damping', 'How quickly the spring settles: low = after a move the head bounces a few more times, high = it stops at once. Usually no need to touch it.')
+V.tunable('feel', 'fwdScale', 0.5, 0, 1.5, 'Forward lunges (dashboard close)', 'How far boost and start lunges move the view forward, toward the dashboard. You end up in the dashboard (bikes): lower it. 0 = never forward (only the other movements).')
+V.tunable('feel', 'landLean', 0.286, 0, 1.5, 'Lean forward on landings', 'While a landing presses the view down it also leans forward by this much. You sink into the pilot body on landings: raise it (the eye dodges forward). 0 = straight down only.')
+V.tunable('feel', 'airLift', 5.0, 0, 15, 'Rise in the air (cm)', 'While airborne the view rises by this much, then comes down with the landing, so the landing feels bigger. 0 = stays at the normal height in the air.')
+V.tunable('feel', 'lungeMax', 12.5, 5, 60, 'Lunges: farthest forward (cm)',
+    'How far forward the view may go on boost and start lunges (and when it leans forward on landings). The lunge goes out to here and stays a moment, so this is how far the boost throws you. Raise it for a bigger lunge; lower it if you end up in the dashboard. 12.5 = as before.')
+V.tunable('feel', 'landFloor', 8.29, 0, 15, 'Lowest point below normal (cm)', 'How far below your normal eye height a landing may press the view. You see inside the pilot body or it is too deep: lower it. Landings feel weak: raise it. 0 = never below the normal height.')
+V.tunable('boost', 'hitstopStrength', 0.333, 0, 1, 'Hit-stop strength (ramjet / start)', 'At ramjet ignition and the race start the whole game slows down for a split second (when "Hit-stop" is ticked). 1 = down to about a quarter speed. 0 = no slow-down.')
+V.tunable('boost', 'hitstopAB', 0.077, 0, 1, 'Hit-stop strength (afterburner)', 'The same split-second slow-down for the afterburner lunge; very light by default. 0 = none.')
+V.tunable('boost', 'hitstopTime', 0.164, 0.05, 0.4, 'Hit-stop length (s)', 'How long the slow-down lasts (seconds). Longer = a longer "freeze".')
+V.tunable('boost', 'warpAmount', 3.0, -5, 5, 'Warp pulse strength (+ / -)', 'At ramjet ignition and the race start the size of the world pulses for a moment (when "Warp pulse" is ticked). Plus = the world briefly shrinks and moves away, minus = it briefly grows and rushes at you. Further from 0 = stronger. 0 = no pulse.')
 
 -- % of a group for the current vehicle: its own value if it has one, else the shared one
 function V.feelPct(group) return V.pctFor(V.model, group) end

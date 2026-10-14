@@ -2,13 +2,13 @@
 -- ramjet burns, written into the game camera's post-process right before each frame is drawn
 -- (the game rebuilds it every frame, so nothing needs undoing). Menu: one amount in %.
 local log = V.logger('screen')
-V.tunable('boost', 'satAB', 0.12, 0, 3, 'Colours: afterburner', '색감: 애프터버너', 'How much stronger the colours get while the afterburner burns. 0 = colours stay the same.', '애프터버너를 쓰는 동안 화면 색이 진해지는 정도. 0 = 색 안 바뀜.')
-V.tunable('boost', 'satRJ', 0.4, 0, 3, 'Colours: ramjet', '색감: 램젯', 'How much stronger the colours get while the ramjet burns. 0 = colours stay the same.', '램젯을 쓰는 동안 화면 색이 진해지는 정도. 0 = 색 안 바뀜.')
-V.tunable('boost', 'vigAB', 0.94, 0, 3, 'Dark edges: afterburner', '가장자리 어둡게: 애프터버너', 'How much the screen edges darken while the afterburner burns (tunnel vision). 0 = edges stay normal.', '애프터버너를 쓰는 동안 화면 가장자리가 어두워지는 정도 (시야가 좁아지는 느낌). 0 = 안 어두워짐.')
-V.tunable('boost', 'vigRJ', 0.97, 0, 3, 'Dark edges: ramjet', '가장자리 어둡게: 램젯', 'How much the screen edges darken while the ramjet burns (tunnel vision). 0 = edges stay normal.', '램젯을 쓰는 동안 화면 가장자리가 어두워지는 정도 (시야가 좁아지는 느낌). 0 = 안 어두워짐.')
-V.tunable('boost', 'flashAB', 0.94, 0, 3, 'Flash: afterburner', '섬광: 애프터버너', 'A short flash of the screen at the moment the afterburner fires. 0 = no flash.', '애프터버너를 켜는 순간 화면이 짧게 번쩍하는 세기. 0 = 번쩍 없음.')
-V.tunable('boost', 'flashRJ', 2, 0, 3, 'Flash: ramjet', '섬광: 램젯', 'A short flash of the screen at the moment the ramjet ignites. 0 = no flash.', '램젯이 점화되는 순간 화면이 짧게 번쩍하는 세기. 0 = 번쩍 없음.')
-V.tunable('boost', 'fadeOut', 1.2, 0.2, 3, 'Colours fade back (s)', '색이 돌아오는 시간 (초)', 'After a boost, how long the colours and edges take to return to normal (seconds). Longer = slower, smoother.', '부스터가 끝난 뒤 색감·가장자리가 원래대로 돌아오는 데 걸리는 시간(초). 길수록 서서히.')
+V.tunable('boost', 'satAB', 0.12, 0, 3, 'Colours: afterburner', 'How much stronger the colours get while the afterburner burns. 0 = colours stay the same.')
+V.tunable('boost', 'satRJ', 0.4, 0, 3, 'Colours: ramjet', 'How much stronger the colours get while the ramjet burns. 0 = colours stay the same.')
+V.tunable('boost', 'vigAB', 0.94, 0, 3, 'Dark edges: afterburner', 'How much the screen edges darken while the afterburner burns (tunnel vision). 0 = edges stay normal.')
+V.tunable('boost', 'vigRJ', 0.97, 0, 3, 'Dark edges: ramjet', 'How much the screen edges darken while the ramjet burns (tunnel vision). 0 = edges stay normal.')
+V.tunable('boost', 'flashAB', 0.94, 0, 3, 'Flash: afterburner', 'A short flash of the screen at the moment the afterburner fires. 0 = no flash.')
+V.tunable('boost', 'flashRJ', 2, 0, 3, 'Flash: ramjet', 'A short flash of the screen at the moment the ramjet ignites. 0 = no flash.')
+V.tunable('boost', 'fadeOut', 1.2, 0.2, 3, 'Colours fade back (s)', 'After a boost, how long the colours and edges take to return to normal (seconds). Longer = slower, smoother.')
 local AB_ACTIVE, RJ_ACTIVE, RJ_GRACE = 0, 3, 5
 local AB_MIN_HOLD, AB_REPEAT = 0.12, 1.0          -- same rule as the afterburner lunge (no flicker on taps)
 

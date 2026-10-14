@@ -18,13 +18,13 @@ local DEFAULTS = {
     ['L_Spaniel_Loop_B/FuseCinematicCameraActor_2146976197'] = { -100, 0, 0, 4 },
 }
 V.VIEW_NAMES = {
-    ORIGIN = { 'Tour start / logbook (no camera)', '투어 시작 / 로그 (카메라 없음)' },
-    ['L_FrontEnd/FuseCinematicCameraActor_UAID_CC96E515467997BB02_1989858585'] = { 'Main menu - campaign', '메인 메뉴 - 캠페인' },
-    ['L_FrontEnd/FuseCinematicCameraActor_UAID_CC96E515467999BB02_1450431967'] = { 'Main menu - multiplayer', '메인 메뉴 - 멀티플레이' },
-    ['L_Mastiff_LOOP_A/CineCameraActor_UAID_CC96E509E6AA352D02_2147455930'] = { 'Race results', '레이스 결과창' },
-    ['L_Mastiff_LOOP_B/CineCameraActor_UAID_CC96E509E6AA352D02_2147469619'] = { 'Race results (2)', '레이스 결과창 (2)' },
-    ['L_Mastiff_P2P_A/CineCameraActor_UAID_CC96E509E6AA352D02_2147463442'] = { 'Race results (3)', '레이스 결과창 (3)' },
-    ['L_Spaniel_Loop_B/FuseCinematicCameraActor_2146976197'] = { 'Engine start shot', '시동 장면' },
+    ORIGIN = { 'Tour start / logbook (no camera)' },
+    ['L_FrontEnd/FuseCinematicCameraActor_UAID_CC96E515467997BB02_1989858585'] = { 'Main menu - campaign' },
+    ['L_FrontEnd/FuseCinematicCameraActor_UAID_CC96E515467999BB02_1450431967'] = { 'Main menu - multiplayer' },
+    ['L_Mastiff_LOOP_A/CineCameraActor_UAID_CC96E509E6AA352D02_2147455930'] = { 'Race results' },
+    ['L_Mastiff_LOOP_B/CineCameraActor_UAID_CC96E509E6AA352D02_2147469619'] = { 'Race results (2)' },
+    ['L_Mastiff_P2P_A/CineCameraActor_UAID_CC96E509E6AA352D02_2147463442'] = { 'Race results (3)' },
+    ['L_Spaniel_Loop_B/FuseCinematicCameraActor_2146976197'] = { 'Engine start shot' },
 }
 local offsets = {}
 for k, o in pairs(DEFAULTS) do offsets[k] = o end

@@ -8,8 +8,8 @@ local log = V.logger('intro')
 local S = V.cam
 local INTRO_CAMERA = 'FuseCinematicCameraActor'
 local INTRO_MAX = 90                       -- s: never hold the cockpit off longer than this
-V.tunable('start', 'leaveDelay', 2.7, 0, 6, 'Wait after the engine start (s)', '시동 뒤 기다리는 시간 (초)', 'In the engine start shot before the race: how many seconds it stays on after the engine starts before the view moves into the cockpit. 0 = moves in right away.', '레이스 전 시동 장면에서, 시동이 걸린 뒤 그 장면을 몇 초 더 보여주고 콕핏으로 들어갈지. 0 = 시동 걸리자마자 이동.')
-V.tunable('start', 'blendTime', 2.1, 0.5, 5, 'Move into the cockpit (s)', '콕핏으로 이동 시간 (초)', 'How long the flight from the start shot\'s camera into your seat takes (seconds). Short = a quick swoop, long = slow.', '시동 장면의 카메라에서 내 좌석까지 날아 들어가는 데 걸리는 시간(초). 짧으면 휙, 길면 천천히.')
+V.tunable('start', 'leaveDelay', 2.7, 0, 6, 'Wait after the engine start (s)', 'In the engine start shot before the race: how many seconds it stays on after the engine starts before the view moves into the cockpit. 0 = moves in right away.')
+V.tunable('start', 'blendTime', 2.1, 0.5, 5, 'Move into the cockpit (s)', 'How long the flight from the start shot\'s camera into your seat takes (seconds). Short = a quick swoop, long = slow.')
 local HEAD_HIDE_AT = 0.9                   -- the pilot's head is hidden again at 90 % of the trip
 
 local st = { state = 'idle', paused = false, introT = 0, blendT = 0, w = 1, gameCam = nil, skipped = false,
@@ -120,8 +120,8 @@ end
 -------------------------------------------------------------------------------- engine idle on the car body
 -- While the cockpit is NOT placing the view, the vehicle's CustomisationRoot (parent of the body
 -- meshes and the pilot) is jiggled a little around its resting place: idle hum, more while W revs.
-V.tunable('start', 'carIdle', 2.15, 0, 5, 'Car body: idle hum', '차체: 공회전 떨림', 'Seen with the game cameras (start shot, third person): how much the standing vehicle body trembles from the engine. Multiplied by "Car body engine hum". 0 = still.', '게임 카메라(시동 장면, 3인칭)로 볼 때 서 있는 차체가 엔진 때문에 부르르 떠는 정도. 위 "차체 엔진 떨림"에 곱해져요. 0 = 안 떨림.')
-V.tunable('start', 'carRev', 1.1, 0, 5, 'Car body: revving (W)', '차체: 부릉 (W)', 'Extra trembling of the vehicle body while you rev with W. 0 = W changes nothing.', 'W를 밟아 엔진을 부릉할 때 차체가 더 떠는 정도. 0 = W를 밟아도 그대로.')
+V.tunable('start', 'carIdle', 2.15, 0, 5, 'Car body: idle hum', 'Seen with the game cameras (start shot, third person): how much the standing vehicle body trembles from the engine. Multiplied by "Car body engine hum". 0 = still.')
+V.tunable('start', 'carRev', 1.1, 0, 5, 'Car body: revving (W)', 'Extra trembling of the vehicle body while you rev with W. 0 = W changes nothing.')
 local cs = { comp = nil, pawn = nil, base = nil, last = nil, phase = 0, rev = 0, on = false, hit = nil, nextFind = 0, failed = false }
 local function csFind(p)
     for _, c in ipairs(V.components(p, 'Engine.SceneComponent')) do

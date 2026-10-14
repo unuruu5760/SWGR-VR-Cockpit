@@ -23,6 +23,9 @@ def build(lang):
     src = os.path.join(ROOT, 'src')
     parts = [open(os.path.join(src, '_header.lua'), encoding='utf-8').read()
              .replace('@LANG@', lang).replace('@VERSION@', VERSION)]
+    if lang == 'ko':                       # Korean menu text (the English build has none)
+        body = open(os.path.join(src, 'lang_ko.lua'), encoding='utf-8').read().rstrip('\n')
+        parts.append('\n' + '-' * 100 + '\n-- lang_ko.lua\n' + '-' * 100 + '\ndo\n' + body + '\nend\n')
     for f in sorted(glob.glob(os.path.join(src, '[0-9]*.lua'))):
         body = open(f, encoding='utf-8').read().rstrip('\n')
         name = os.path.basename(f)

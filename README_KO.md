@@ -397,14 +397,16 @@ UEVR 프로필(`%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`) 안:
 ## 소스에서 빌드하기
 
 ```
-src/            스크립트 (부분별: _header, 00_core … 90_menu, _footer)
+src/            스크립트 (부분별: _header, 00_core … 90_menu, _footer), 전부 영어로;
+                lang_ko.lua = 한글 메뉴 문장 (한국어판에만 들어가요)
 profile/        UEVR 프로필 파일 (config, cameras, cvars, user_script, v1.x 검증 노트)
 tests/          run_tests.py + mock.lua: 가짜 게임에서 스크립트 시험
 build.py        dist/EN|KO/swgr_vr_cockpit.lua 빌드, "release"는 배포 파일까지
 ```
 
 - `python build.py` → `dist/EN/swgr_vr_cockpit.lua`, `dist/KO/swgr_vr_cockpit.lua`.
-  `src/NN_*.lua` 하나하나를 `do … end`로 감싸요.
+  `src/NN_*.lua` 하나하나를 `do … end`로 감싸요. 영어판에는 한글이 한 글자도 없고, 한국어판은
+  같은 코드에 `lang_ko.lua`만 더한 거예요.
 - `python build.py release [PAK_폴더]` → `release/EN/`과 `release/KO/`에 각각
   `SWGR-Win64-Shipping.zip`(프로필)과 `swgr_vr_cockpit.lua`, (`PAK_폴더`가 있으면) `release/`에
   pak 모드 zip.
@@ -414,8 +416,12 @@ build.py        dist/EN|KO/swgr_vr_cockpit.lua 빌드, "release"는 배포 파�
   리셋. LuaJIT의 `lua51.dll`이 같은 폴더에 있어야 해요 (들어 있지 않아요. 예: OBS Studio에 있는 것).
   LuaJIT은 Lua 5.1이라 스크립트는 5.3 이상 연산자를 쓰지 않아요.
 
-**값을 새로 추가할 때** — 쓰는 곳에서 `V.tunable(묶음, 키, 추천값, 최소, 최대, 영어, 한국어,
-영어설명, 한국어설명)`로 등록하고 `V.val(키)`로 읽어요 (지금 차량의 값, 없으면 기본값).
-`90_menu.lua`의 `TUNE_LAYOUT`에 키를 넣어 맞는 주제에 보이게 하세요 (안 넣으면 "기타"에 나와요).
-설명은 메뉴를 처음 보는 사람 기준으로: 어떻게 느껴지는지, 언제 올리고 내리는지, 0이면 어떻게
-되는지.
+**메뉴 문장** — 코드에는 영어로 써요: 이름은 `tr('Text')`, 마우스 설명은 `tip('Text')`, 안내문은
+`help('Text')`. 한국어판에서는 `tr`이 `lang_ko.lua`(`['Text'] = '…'`)에서 찾아 바꿔요. 번역이 없는
+문장은 그냥 영어로 나와서, 번역이 빠져도 고장 나지 않아요.
+
+**값을 새로 추가할 때** — 쓰는 곳에서 `V.tunable(묶음, 키, 추천값, 최소, 최대, 이름, 설명)`으로
+등록하고 `V.val(키)`로 읽어요 (지금 차량의 값, 없으면 기본값). `90_menu.lua`의 `TUNE_LAYOUT`에 키를
+넣어 맞는 주제에 보이게 하고 (안 넣으면 "기타"에 나와요), 한글은 `lang_ko.lua`에 이름과 설명을
+추가하세요. 설명은 메뉴를 처음 보는 사람 기준으로: 어떻게 느껴지는지, 언제 올리고 내리는지,
+0이면 어떻게 되는지.
