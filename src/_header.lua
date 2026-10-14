@@ -1,9 +1,8 @@
 -- STAR WARS Galactic Racer - VR cockpit package for UEVR (one file)
 --
--- Credits: joeyhodge - the UEVR backend for this game; elliotttate & madscy - the VR cockpit
--- (v1.2.0, the cockpit section of this file), used and shared with their permission; Nero - the
--- profile and user_script tuning. v2.0.0 by ody: cockpit shake, boost effects, race start,
--- per-vehicle settings, menu. https://github.com/unuruu5760/SWGR-VR-Cockpit
+-- Built on the UEVR profile and VR cockpit (v1.2.0, the cockpit section of this file) by Nero,
+-- madscy and elliotttate, running on joeyhodge's UEVR backend for this game. v2.0.0 by ody: cockpit shake, boost effects, race start, per-vehicle
+-- settings, menu. https://github.com/unuruu5760/SWGR-VR-Cockpit
 --
 -- Install: put this file in the UEVR profile's "scripts" folder (remove older swgr_cockpit_*.lua
 -- scripts). Settings: UEVR menu > Script UI. Saved in the profile's "data" folder:

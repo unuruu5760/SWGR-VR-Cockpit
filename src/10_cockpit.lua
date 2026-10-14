@@ -1,6 +1,5 @@
--- VR cockpit camera. Based on "Galactic Racer VR cockpit v1.2.0" by madscy & elliotttate
--- (used and shared with their permission): the view sits at the pilot seat socket of the
--- vehicle's authored mesh, seat-local centimetres, pilot models face +Y in the seat frame.
+-- VR cockpit camera. Based on "Galactic Racer VR cockpit v1.2.0" (Nero, madscy, elliotttate):
+-- the view sits at the pilot seat socket of the vehicle's authored mesh, seat-local centimetres, pilot models face +Y in the seat frame.
 -- Changes for this package: settings come from the shared settings file, the eye position is set
 -- per vehicle by the "vehicle" section, other sections hook in after the view is placed.
 local log = V.logger('cockpit')

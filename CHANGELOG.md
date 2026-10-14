@@ -1,8 +1,9 @@
 # v2.0.0 — 15 October 2026
 
-Integrated release by ody, built on the v1.2.0 cockpit by elliotttate and madscy,
-Nero's profile tuning and joeyhodge's UEVR backend. One script, `scripts/swgr_vr_cockpit.lua`
-(English or Korean menu), replaces `swgr_cockpit_camera.lua`.
+By ody, built on the UEVR profile and VR cockpit by Nero, madscy and elliotttate, running on
+joeyhodge's UEVR backend. In the cockpit the vehicle sat still and speed was hard to feel; this
+release makes the seat move. One script, `scripts/swgr_vr_cockpit.lua` (English or Korean menu),
+replaces `swgr_cockpit_camera.lua`.
 
 **Cockpit (kept from v1.2.0)**
 - Seat anchoring on `PilotSeat`, the five camera-lock modes, pilot visibility, intro / crash

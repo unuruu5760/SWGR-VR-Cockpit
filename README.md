@@ -1,23 +1,38 @@
 # STAR WARS Galactic Racer — VR Cockpit for UEVR (v2.0.0)
 
-A UEVR profile and a single Lua script that put you in the pilot seat of every vehicle in
-**STAR WARS Galactic Racer** — and make the seat feel alive: engine and road rumble, boost
-lunges, nose lift, landings that hit, banking you can tame, and a body that follows the pilot
-on jumps. Everything is adjustable in game, and every change you make is saved automatically
-for the vehicle you are driving.
-
-v2.0.0 is built directly on the community VR cockpit (v1.2.0) by **elliotttate**, **madscy**
-and **Nero**, running on **joeyhodge**'s UEVR backend for this game. See [Credits](#credits).
+A UEVR profile and a single Lua script for **STAR WARS Galactic Racer**: you sit in the pilot
+seat of every vehicle, and the cockpit finally moves — engine and road rumble, boost lunges,
+nose lift, landings that hit, banking you can tame, a body that follows the pilot on jumps.
+Everything is adjustable in game, and what you change is saved for the vehicle you drive.
 
 > 한국어 설명서: [README_KO.md](README_KO.md)
 
----
+## Why
+
+In the VR cockpit the vehicle sat perfectly still. No engine, no road, no kick when the boost
+fires — even at full speed it felt like sitting in a parked car, and you could hardly feel the speed.
+v2.0.0 adds the effects and features that make the seat come alive and let the speed land.
+
+The optional **pak mod** is for something else: the black letterbox bars, black transition
+screens and dark / white translucent panels of the game's UI look fine on a monitor but float
+in front of your face as big slabs in VR. It removes them.
+
+## Credits
+
+This is built on the UEVR profile and the VR cockpit script made by **Nero**, **madscy** and
+**elliotttate** — each building on the others' work — and it runs on **joeyhodge**'s UEVR
+backend DLL for this game. v2.0.0 (the new effects and features, and putting it all into one
+script) is by **ody**.
+
+Huge thanks to joeyhodge, elliotttate, madscy and Nero. Thanks also to
+[Random-kaizoku/PracticeMode-SWGR](https://github.com/Random-kaizoku/PracticeMode-SWGR) for the
+hint that helped map the characters' codenames to their names.
 
 ## Contents
 
-- [Credits](#credits)
 - [What's new in v2.0.0](#whats-new-in-v200)
 - [Install](#install)
+- [Pak mod](#pak-mod)
 - [Controls](#controls)
 - [The menu](#the-menu)
 - [Per-vehicle settings and auto-save](#per-vehicle-settings-and-auto-save)
@@ -29,31 +44,10 @@ and **Nero**, running on **joeyhodge**'s UEVR backend for this game. See [Credit
 
 ---
 
-## Credits
-
-This project stands on other people's work. The profile and the cockpit script grew step by
-step, each author building on the previous one; v2.0.0 integrates that work with new additions.
-
-| Who | What |
-| --- | --- |
-| **joeyhodge** | The UEVR backend DLL build for Galactic Racer (`100726swgrp2`). Nothing here runs without it. |
-| **elliotttate** | The original VR cockpit script: seat anchoring on each vehicle's authored `PilotSeat` socket, the anti-warp horizon, handing the camera back to the game. |
-| **madscy** | Cockpit additions and the v1.x profile: the five camera-lock modes with quaternion smoothing, intro / crash camera handling, the game-camera cycle, the HDR findings, and the design notes. |
-| **Nero** | Profile and `user_script.txt` tuning: Panini / distortion / motion blur / camera shake off, and the stereo-mismatch fixes (SSR, AO, lens flare, SSGI, HDR). |
-| **ody** | v2.0.0: the integrated script and everything listed below (cockpit feel, boost effects, per-vehicle auto-save, built-in tuning, Korean menu, pak mod). |
-
-The cockpit authors gave permission to integrate and share their work with credit. Thank you,
-joeyhodge, elliotttate, madscy and Nero.
-
-Also thanks to [Random-kaizoku/PracticeMode-SWGR](https://github.com/Random-kaizoku/PracticeMode-SWGR),
-which pointed at `RacerDef.CharacterName` and helped map the characters' codenames to their names.
-
----
-
 ## What's new in v2.0.0
 
-v1.2.0 put you in the seat. v2.0.0 keeps that cockpit (seat anchoring, camera locks, game
-cameras) and adds, in **one script** (`swgr_vr_cockpit.lua`, English or Korean build):
+The original cockpit put you in the seat. v2.0.0 keeps that cockpit (seat anchoring, camera
+locks, game cameras) and adds, in **one script** (`swgr_vr_cockpit.lua`, English or Korean build):
 
 - **Cockpit shake** — the view moves like a head on a spring: engine idle and revving, engine
   while driving, road rumble and bumps, corner push, drift rattle, slipstream buffeting,
@@ -129,16 +123,43 @@ For Nero's stereo-mismatch fixes, see [Known issues and notes](#known-issues-and
 
 ### 3. Pak mod (optional)
 
-**`SWGR-NoBlackBars-pak-v2.0.0.zip`**: extract into the game folder so the three files end up in
-`STAR WARS Galactic Racer\Griffin\Content\Paks\~mods\`. The game's own pak files are not
-touched; delete the three `zzz_SWGR_NoBlackBars_P.*` files to remove it. See
-[Pak mod](#pak-mod).
+**`SWGR-NoBlackBars-pak-v2.0.0.zip`** removes the black bars and panels that look bad in VR. See
+[Pak mod](#pak-mod) right below.
 
 ### Updating from v1.2.0
 
 v2.0.0 replaces `swgr_cockpit_camera.lua`. It has its own settings and does not read
 `data/swgr-cockpit-options.json`; it starts from its built-in defaults. The default hotkeys
 changed (F3 / F4 / F5, see below).
+
+---
+
+## Pak mod
+
+**Why:** the game's UI uses black letterbox bars, black screens between scenes and dark or white
+translucent panels behind menus. On a monitor they look normal; in VR they hang in front of you
+as big black or white slabs. This mod makes them transparent, so you only see the parts that
+matter.
+
+**What it changes** (a few UI widgets, nothing else):
+
+- start / finish black bars, black screens between scenes, the two dark panels before the start
+  and the ESC pause panel → transparent
+- the white translucent background of the race results and of the results' pause menu →
+  transparent
+- the dark background of the race-failed ("league token lost") screen → 40 %
+- the translucent panel of the main menu's sign-in check → transparent
+
+**Good to know**
+
+- It is separate from the script and the profile: use it with them, without them, or not at all.
+  The cockpit works fine without it.
+- Install: extract `SWGR-NoBlackBars-pak-v2.0.0.zip` into the game folder so
+  `zzz_SWGR_NoBlackBars_P.pak`, `.ucas` and `.utoc` end up in
+  `STAR WARS Galactic Racer\Griffin\Content\Paks\~mods\`. The game's own pak files are not touched.
+- Remove: delete those three files.
+- Made for the October 2026 version of the game. If a game update changes those screens and
+  something looks wrong, remove it.
 
 ---
 
@@ -333,8 +354,8 @@ Never used in races.
   `r.HDR.EnableHDROutput 0` at startup, together with `r.SSR.Quality 0`,
   `r.AmbientOcclusionLevels 0`, `r.LensFlareQuality 0` and `r.SSGI.LeakFreeReprojection 0`;
   the `Renderer_r.DefaultFeature.AmbientOcclusion=1` and `Engine_r.AmbientOcclusionLevels=1`
-  lines are removed from `cvars_standard.txt` / `cvars_data.txt`. madscy's v1.2.0 notes warn
-  that switching HDR on a live swapchain can leave the world black with only the UI. If that
+  lines are removed from `cvars_standard.txt` / `cvars_data.txt`. The v1.2.0 notes warn that
+  switching HDR on a live swapchain can leave the world black with only the UI. If that
   happens, remove the two HDR lines from `user_script.txt` and use the `Engine.ini` way instead:
   create `%LOCALAPPDATA%\StarWarsGalacticRacer\Saved\Config\Windows\Engine.ini` with
 
@@ -348,19 +369,6 @@ Never used in races.
 - **Not every vehicle and character has been tested.** See the note in
   [Per-vehicle settings](#per-vehicle-settings-and-auto-save).
 - Values in the Korean and English builds are the same; only the menu language differs.
-
----
-
-## Pak mod
-
-`zzz_SWGR_NoBlackBars_P` (separate download) edits a few UI widgets; nothing else:
-
-- start / finish black bars, scene-transition black screens, the two dark panels before the
-  start and the ESC pause panel → transparent;
-- the white translucent background of the race results and of the results' pause menu →
-  transparent;
-- the dark background of the race-failed ("league token lost") screen → 40 %;
-- the translucent panel of the main menu's sign-in check → transparent.
 
 ---
 
