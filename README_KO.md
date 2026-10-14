@@ -400,6 +400,7 @@ UEVR 프로필(`%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`) 안:
 src/            스크립트 (부분별: _header, 00_core … 90_menu, _footer), 전부 영어로;
                 lang_ko.lua = 한글 메뉴 문장 (한국어판에만 들어가요)
 profile/        UEVR 프로필 파일 (config, cameras, cvars, user_script, v1.x 검증 노트)
+profile_ko/     한국어 프로필에만 더 들어가는 파일 (글꼴 안내)
 tests/          run_tests.py + mock.lua: 가짜 게임에서 스크립트 시험
 build.py        dist/EN|KO/swgr_vr_cockpit.lua 빌드, "release"는 배포 파일까지
 ```

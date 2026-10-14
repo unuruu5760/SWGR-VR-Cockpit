@@ -64,15 +64,8 @@ def release(pak_dir=None):
             shutil.copy(os.path.join(ROOT, f), stage)
         script = build(lang)
         shutil.copy(script, os.path.join(stage, 'scripts', SCRIPT))
-        if lang == 'ko':
-            os.makedirs(os.path.join(stage, 'fonts'))
-            with open(os.path.join(stage, 'fonts', 'README_FONT.txt'), 'w', encoding='utf-8-sig', newline='\r\n') as fh:
-                fh.write('Copy C:\\Windows\\Fonts\\malgun.ttf (Malgun Gothic) into this folder.\n'
-                         'UEVR loads menu fonts only from the profile\'s fonts folder; without it the Korean menu text shows as "?".\n'
-                         '(The font is part of Windows and is not redistributed here.)\n\n'
-                         'C:\\Windows\\Fonts\\malgun.ttf (맑은 고딕)를 이 폴더에 복사하세요.\n'
-                         'UEVR 메뉴는 프로필의 fonts 폴더에 있는 글꼴만 읽어요. 없으면 메뉴의 한글이 ? 로 나와요.\n'
-                         '(윈도우에 들어 있는 글꼴이라 여기에는 넣지 않았어요.)\n')
+        if lang == 'ko':                   # Korean-only profile files (the font note)
+            shutil.copytree(os.path.join(ROOT, 'profile_ko'), stage, dirs_exist_ok=True)
         os.makedirs(os.path.join(out, L))
         z = os.path.join(out, L, 'SWGR-Win64-Shipping.zip')
         zip_dir(stage, z)

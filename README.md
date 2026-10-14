@@ -418,6 +418,7 @@ start with `[SWGR VR]`.
 src/            the script, in sections (_header, 00_core … 90_menu, _footer), all in English;
                 lang_ko.lua = the Korean menu text, added only to the Korean build
 profile/        the UEVR profile files (config, cameras, cvars, user_script, v1.x validation notes)
+profile_ko/     extra files for the Korean profile only (the font note)
 tests/          run_tests.py + mock.lua: the script against a fake game
 build.py        builds dist/EN|KO/swgr_vr_cockpit.lua; "release" builds the packages
 ```
