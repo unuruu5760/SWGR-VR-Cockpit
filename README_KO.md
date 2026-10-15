@@ -348,6 +348,12 @@ Northropi, Merlin, Rook, Saker. 나머지 차량은 원작 콕핏의 기본 눈 
   r.AllowHDR=0
   r.HDR.EnableHDROutput=0
   ```
+- **그리기 명령 설정.** `user_script.txt`는
+  `r.RHICmd.ParallelTranslate.MaxCommandsPerTranslate 0`과
+  `r.RHICmd.ParallelTranslate.CombineSingleAndParallel 1`도 설정해요(엔진 기본값 256 / 0).
+  CPU가 그래픽카드에 그리기 명령을 넘기는 방식(잘게 나누지 않고 묶어서)만 바꾸고, 화면은
+  그대로예요. CPU가 병목일 때 프레임이 조금 안정될 수 있고, 고성능 CPU에서는 차이가 거의
+  없을 수 있어요. 뭔가 이상하면 이 두 줄을 지우세요.
 
   를 넣고 **읽기 전용**으로 해 두세요 (게임이 관리하지 않는 설정 파일을 지워버려요).
 - **모든 차량·캐릭터를 시험하진 못했어요.** [차량별 설정](#차량별-설정과-자동-저장)의 안내를

@@ -3,6 +3,10 @@
 - Podracers in the campaign's memory races (pawn class `VBP_Plane_Memory_C`) were not
   recognised as a vehicle: the vehicle menus stayed greyed out and the podracer defaults did not
   apply. The vehicle type is now read from the first word of the class name.
+- Profile: `user_script.txt` adds `r.RHICmd.ParallelTranslate.MaxCommandsPerTranslate 0` and
+  `r.RHICmd.ParallelTranslate.CombineSingleAndParallel 1` (engine defaults 256 / 0). They cut the
+  CPU overhead of handing draw commands to the GPU; the picture does not change. The gain is
+  small, and on a fast CPU you may see no difference at all.
 
 # v2.0.0 — 15 October 2026
 

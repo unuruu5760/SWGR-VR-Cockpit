@@ -366,6 +366,12 @@ Never used in races.
   r.AllowHDR=0
   r.HDR.EnableHDROutput=0
   ```
+- **Command-list settings.** `user_script.txt` also sets
+  `r.RHICmd.ParallelTranslate.MaxCommandsPerTranslate 0` and
+  `r.RHICmd.ParallelTranslate.CombineSingleAndParallel 1` (engine defaults 256 / 0). They change
+  how the CPU hands draw commands to the GPU (fewer, larger batches), not what you see. It can
+  steady the frame rate a little when the CPU is the bottleneck; on a fast CPU there may be no
+  difference at all. If anything seems off, delete those two lines.
 
   and make it **read-only** (the game removes unmanaged config files).
 - **Not every vehicle and character has been tested.** See the note in
