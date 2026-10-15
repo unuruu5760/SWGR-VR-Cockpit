@@ -162,6 +162,11 @@ MOCK.menu('click'); MOCK.menu('idle')
 frames(72)
 -- crash camera / tumbling
 v2.IsTumbling = function() return true end; frames(30); v2.IsTumbling = function() return false end; frames(30)
+-- the campaign's memory races use another podracer class (VBP_Plane_Memory_C): still a Plane
+local pawn3 = MOCK.makeVehicle('Plane', 'Tarchia', 'VBP_Plane_Memory_C')
+MOCK.pawn = pawn3; frames(72 * 4)
+note('memory-race podracer: '..tostring(SWGR_VR.model)..' type '..tostring(SWGR_VR.vtype)..', ramjet '..tostring(SWGR_VR.val('ramjet')))
+MOCK.menu('idle')
 -- vehicle gone (back to menu), script reset
 MOCK.pawn = nil; frames(72)
 MOCK.fire('reset')

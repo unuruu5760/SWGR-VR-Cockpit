@@ -1,4 +1,4 @@
-# 스타워즈 갤럭틱 레이서 — UEVR VR 콕핏 (v2.0.0)
+# 스타워즈 갤럭틱 레이서 — UEVR VR 콕핏 (v2.0.1)
 
 **STAR WARS Galactic Racer**용 UEVR 프로필과 Lua 스크립트 하나예요. 모든 차량에서 조종석에
 앉혀 주고, 드디어 콕핏이 움직여요: 엔진·노면 진동, 부스터 돌진, 기수 들림, 쿵 하는 착지,
@@ -94,8 +94,8 @@ joeyhodge, elliotttate, madscy, Nero 정말 고맙습니다. 캐릭터 코드명
 언어마다 릴리스가 따로 있고, 파일 이름이 UEVR이 필요로 하는 **`SWGR-Win64-Shipping.zip`** 그대로라
 이름을 바꿀 필요가 없어요:
 
-- 한글 메뉴: [**v2.0.0-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.0-ko)
-- 영어 메뉴: [**v2.0.0**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.0)
+- 한글 메뉴: [**v2.0.1-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.1-ko)
+- 영어 메뉴: [**v2.0.1**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.1)
 
 1. 게임을 끄고, 지금 프로필 폴더 `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`를 다른 곳에
    **백업**(복사)한 다음 **지우세요**. 예전 프로필 위에 그냥 가져오면 예전 스크립트
@@ -121,7 +121,7 @@ joeyhodge, elliotttate, madscy, Nero 정말 고맙습니다. 캐릭터 코드명
 
 ### 3. pak 모드 (선택)
 
-**`SWGR-NoBlackBars-pak-v2.0.0.zip`**(두 릴리스 모두에 있어요): VR에서 보기 싫은 검은 띠와 판을
+**`SWGR-NoBlackBars-pak-v2.0.1.zip`**(두 릴리스 모두에 있어요): VR에서 보기 싫은 검은 띠와 판을
 없애요. 바로 아래 [pak 모드](#pak-모드)를 보세요.
 
 ### v1.2.0에서 올라올 때
@@ -148,7 +148,7 @@ v2.0.0은 `swgr_cockpit_camera.lua`를 대신해요. 설정은 따로 저장하�
 **알아둘 점**
 
 - 스크립트·프로필과는 따로예요. 같이 써도, 이것만 써도, 안 써도 돼요. 없어도 콕핏은 잘 돌아가요.
-- 설치: `SWGR-NoBlackBars-pak-v2.0.0.zip`을 게임 폴더에 풀어서 `zzz_SWGR_NoBlackBars_P.pak`,
+- 설치: `SWGR-NoBlackBars-pak-v2.0.1.zip`을 게임 폴더에 풀어서 `zzz_SWGR_NoBlackBars_P.pak`,
   `.ucas`, `.utoc` 3개가 `STAR WARS Galactic Racer\Griffin\Content\Paks\~mods\`에 들어가게 하세요.
   게임 원래 pak 파일은 건드리지 않아요.
 - 지우기: 그 3개만 지우면 돼요.

@@ -40,7 +40,7 @@ local function newComponent(cls, fields)
     fields._cls = cls
     return strict('component '..cls, fields)
 end
-function MOCK.makeVehicle(kind, model)
+function MOCK.makeVehicle(kind, model, className)
     local v = strict('VehicleState', {
         Valid = true,
         VehicleTransform = { Translation = vec(1000, 2000, 300), Rotation = quatT(0, 0, 0, 1) },
@@ -95,7 +95,7 @@ function MOCK.makeVehicle(kind, model)
         VehicleState = v, InputSource = 1, RootComponent = custom,
         get_address = function() return 'pawn_'..model end,
         is_a = function(self, c) return true end,
-        get_class = function() return { get_fname = function() return fname('VBP_'..kind..'_C') end } end,
+        get_class = function() return { get_fname = function() return fname(className or ('VBP_'..kind..'_C')) end } end,
         K2_GetComponentsByClass = function(self, c)
             local short = c.name:match('%.([%w_]+)$') or c.name
             return byClass[short] or {}

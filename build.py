@@ -14,7 +14,7 @@ do ... end (each section gets its own 200-local budget), then _footer.lua."""
 import glob, os, shutil, sys, zipfile
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-VERSION = '2.0.0'
+VERSION = '2.0.1'
 SCRIPT = 'swgr_vr_cockpit.lua'
 PAK = 'zzz_SWGR_NoBlackBars_P'
 

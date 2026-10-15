@@ -45,9 +45,11 @@ local function findModel(p)
     end
     return best
 end
+-- vehicle type from the pawn class: VBP_<Type>_C, or a variant such as VBP_Plane_Memory_C (the
+-- podracer of the campaign's memory races)
 local function vehicleType(p)
     local ok, n = pcall(function() return p:get_class():get_fname():to_string() end)
-    return ok and n:match('^VBP_(%a+)_C$') or nil
+    return ok and n:match('^VBP_(%a+)_') or nil
 end
 
 -- eye of a model: the user's own (second value true), else its built-in one, else the cockpit default

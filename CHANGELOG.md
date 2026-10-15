@@ -1,3 +1,9 @@
+# v2.0.1 — 15 October 2026
+
+- Podracers in the campaign's memory races (pawn class `VBP_Plane_Memory_C`) were not
+  recognised as a vehicle: the vehicle menus stayed greyed out and the podracer defaults did not
+  apply. The vehicle type is now read from the first word of the class name.
+
 # v2.0.0 — 15 October 2026
 
 By ody, built on the UEVR profile and VR cockpit by Nero, madscy and elliotttate, running on

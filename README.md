@@ -1,4 +1,4 @@
-# STAR WARS Galactic Racer — VR Cockpit for UEVR (v2.0.0)
+# STAR WARS Galactic Racer — VR Cockpit for UEVR (v2.0.1)
 
 A UEVR profile and a single Lua script for **STAR WARS Galactic Racer**: you sit in the pilot
 seat of every vehicle, and the cockpit finally moves — engine and road rumble, boost lunges,
@@ -98,8 +98,8 @@ Full list: [CHANGELOG.md](CHANGELOG.md).
 Each language has its own release with a file named **`SWGR-Win64-Shipping.zip`** — the name
 UEVR needs, so there is nothing to rename:
 
-- English menu: [**v2.0.0**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.0)
-- Korean menu: [**v2.0.0-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.0-ko)
+- English menu: [**v2.0.1**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.1)
+- Korean menu: [**v2.0.1-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.1-ko)
 
 1. Close the game, **back up** your current profile folder
    `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` (copy it somewhere else) and then **delete it**.
@@ -125,7 +125,7 @@ For Nero's stereo-mismatch fixes, see [Known issues and notes](#known-issues-and
 
 ### 3. Pak mod (optional)
 
-**`SWGR-NoBlackBars-pak-v2.0.0.zip`** (in both releases) removes the black bars and panels that
+**`SWGR-NoBlackBars-pak-v2.0.1.zip`** (in both releases) removes the black bars and panels that
 look bad in VR. See [Pak mod](#pak-mod) right below.
 
 ### Updating from v1.2.0
@@ -156,7 +156,7 @@ matter.
 
 - It is separate from the script and the profile: use it with them, without them, or not at all.
   The cockpit works fine without it.
-- Install: extract `SWGR-NoBlackBars-pak-v2.0.0.zip` into the game folder so
+- Install: extract `SWGR-NoBlackBars-pak-v2.0.1.zip` into the game folder so
   `zzz_SWGR_NoBlackBars_P.pak`, `.ucas` and `.utoc` end up in
   `STAR WARS Galactic Racer\Griffin\Content\Paks\~mods\`. The game's own pak files are not touched.
 - Remove: delete those three files.
