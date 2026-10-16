@@ -92,6 +92,7 @@ Full list: [CHANGELOG.md](CHANGELOG.md).
 - STAR WARS Galactic Racer (PC).
 - UEVR with **joeyhodge's Galactic Racer backend** (`100726swgrp2`) — the same UEVR you used
   for the v1.2.0 cockpit. UEVR and the game are not included here.
+https://github.com/joeyhodge/UEVR/releases#release-100726swgrp2
 
 ### 1. The profile (recommended)
 
