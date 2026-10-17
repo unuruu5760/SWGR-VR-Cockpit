@@ -18,16 +18,33 @@ local function writeSettings(s, v)
     -- switch also lets the game's own vignette through
     s.bOverride_VignetteIntensity = v.vigOn or v.vig > 0.001
     s.VignetteIntensity = v.vig
-    s.bOverride_ColorSaturation = v.sat > 0.001
-    local cs = s.ColorSaturation; cs.X, cs.Y, cs.Z, cs.W = 1, 1, 1, 1 + v.sat; s.ColorSaturation = cs
-    s.bOverride_ColorContrast = v.sat > 0.001
-    local cc = s.ColorContrast; cc.X, cc.Y, cc.Z, cc.W = 1, 1, 1, 1 + v.sat * 0.4; s.ColorContrast = cc
+    -- (the VR picture test, 65_picture: its saturation / contrast multiply the boost's; untouched = 1)
+    local pic = V.pic and V.pic.active and V.pic or nil
+    local pSat, pCon = pic and pic.sat or 1, pic and pic.con or 1
+    s.bOverride_ColorSaturation = v.sat > 0.001 or math.abs(pSat - 1) > 0.001
+    local cs = s.ColorSaturation; cs.X, cs.Y, cs.Z, cs.W = 1, 1, 1, (1 + v.sat) * pSat; s.ColorSaturation = cs
+    s.bOverride_ColorContrast = v.sat > 0.001 or math.abs(pCon - 1) > 0.001
+    local cc = s.ColorContrast; cc.X, cc.Y, cc.Z, cc.W = 1, 1, 1, (1 + v.sat * 0.4) * pCon; s.ColorContrast = cc
     s.bOverride_SceneColorTint = v.tint and true or false
     local tc = s.SceneColorTint; tc.R, tc.G, tc.B, tc.A = v.r, v.g, v.b, 1; s.SceneColorTint = tc
+    if pic then
+        if pic.exp then s.bOverride_AutoExposureBias = true; s.AutoExposureBias = pic.exp end
+        if pic.bloom then s.bOverride_BloomIntensity = true; s.BloomIntensity = pic.bloom end
+        if pic.low then
+            s.bOverride_AutoExposureLowPercent = true; s.AutoExposureLowPercent = pic.low
+            -- (the high end must stay above it)
+            s.bOverride_AutoExposureHighPercent = true; s.AutoExposureHighPercent = math.min(100, math.max(90, pic.low + 1.5))
+        end
+        if pic.minBright then s.bOverride_AutoExposureMinBrightness = true; s.AutoExposureMinBrightness = pic.minBright end
+        if math.abs((pic.hi or 1) - 1) > 0.001 then
+            s.bOverride_ColorGainHighlights = true
+            local g = s.ColorGainHighlights; g.X, g.Y, g.Z, g.W = 1, 1, 1, pic.hi; s.ColorGainHighlights = g
+        end
+    end
 end
 local function writeCamera()
     local v = now
-    if not (v.vigOn or v.vig > 0.001 or v.sat > 0.001 or v.tint) then return end
+    if not (v.vigOn or v.vig > 0.001 or v.sat > 0.001 or v.tint or (V.pic and V.pic.active)) then return end
     local pc = api:get_player_controller(0)
     local cm = pc and pc.PlayerCameraManager
     if not cm then return end

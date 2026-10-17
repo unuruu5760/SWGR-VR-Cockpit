@@ -5,8 +5,11 @@
 local log = V.logger('nearclip')
 local S = V.cam
 local MIN_NEAR = 3.0
+-- every change of the plane makes UEVR work out both eyes' projections again (and log 7 lines):
+-- changes smaller than STEP wait, and a small leftover difference is sent after SETTLE seconds
+local STEP, SETTLE = 2.0, 1.0
 -- the cut distance: set in the View menu for the vehicle driven (untouched = the shared value)
-V.tunable('view', 'near', 10.0, 3, 30, 'Cut distance (cm)',
+V.tunable('view', 'near', 10.0, 3, 150, 'Cut distance (cm)',
     'Nothing closer to your eyes than this is drawn, so you don\'t see the inside of the pilot body. Dashboard or hands cut away: lower it. Inside of the body visible: raise it.').main = true
 V.tunable('view', 'nearLow', 5.0, 0, 20, 'Landing: extra cut (cm)', 'Only while a landing presses the view down: this much is added to the "Cut distance", so even more right in front of your eyes is not drawn (hides the inside of the pilot body). Inside of the body visible on landings: raise it. Dashboard / hands vanish for a moment on landings: lower it. 0 = no extra cut.')
 -- older data had one shared value per vehicle type. A vehicle's own type value becomes its own
@@ -46,7 +49,7 @@ do
     local ok, v = pcall(function() return api:get_engine().NearClipPlane end)
     if ok and tonumber(v) and tonumber(v) > 0 then origNear = tonumber(v) end
 end
-local active, lastSet = false, nil
+local active, lastSet, lastAt = false, nil, 0
 local function restore()
     if not active then return end
     command(string.format('r.SetNearClipPlane %.2f', origNear))
@@ -63,9 +66,9 @@ V.onTick('nearclip', function()
     local want = math.max(MIN_NEAR, V.val('near') + (down > 2 and V.val('nearLow') or 0) - fwd)
     want = math.floor(want * 2 + 0.5) / 2               -- 0.5 cm steps: only send real changes
     active = true
-    if want ~= lastSet then
+    if lastSet == nil or math.abs(want - lastSet) >= STEP or (want ~= lastSet and V.t - lastAt >= SETTLE) then
         command(string.format('r.SetNearClipPlane %.2f', want))
-        lastSet = want
+        lastSet, lastAt = want, V.t
     end
 end)
 V.onReset(restore)

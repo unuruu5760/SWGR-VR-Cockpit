@@ -4,7 +4,7 @@ local log = V.logger('vehicle')
 local S = V.cam
 
 V.TYPES = { 'Bike', 'Car', 'Skimmer', 'Plane' }
-V.TYPE_NAMES = { Bike = { 'Bike' }, Car = { 'Car' }, Skimmer = { 'Skimmer' }, Plane = { 'Plane' } }
+V.TYPE_NAMES = { Bike = { 'Bike' }, Car = { 'Landspeeder' }, Skimmer = { 'Skimmer' }, Plane = { 'Podracer' } }
 -- body follow on jumps (bikes: the rider stands up): how much the eye follows the pilot chest up /
 -- forward. Set in the View menu for the vehicle driven (not listed in "Fine tuning").
 V.tunable('view', 'followUp', 0.74, 0, 3, 'Jumps: up with the pilot',
@@ -61,6 +61,12 @@ function V.eyeFor(m)
     if validEye(b) then return b, false end
     return V.DEFAULT_EYE, false
 end
+-- the eye a vehicle has without the user's: its built-in one, else the cockpit default
+function V.defaultEyeFor(m)
+    local b = m and V.VEH_DEFAULTS.eyes[m]
+    if validEye(b) then return b end
+    return V.DEFAULT_EYE
+end
 local function applyEye()
     local e = V.eyeFor(V.model)
     S.setEye(e[1], e[2], e[3])
@@ -89,11 +95,14 @@ V.PILOT_NAMES = {
     Potato = 'Lyren Shok', Turnip = 'Kestar Bool', Swede = 'Sebulba',
     Cabbage = 'Dud Bolt', Celery = 'Gasgano', Garlic = 'Teemto Pagalies', Onion = 'Ben Quadinaros', Pepper = 'Ody Mandrell',
 }
--- 'Nik Skandaro (Spinach)'
+-- 'Nik Skandaro' (the menu shows the name only; the game's code name, e.g. Spinach, is for the log);
+-- "not found" for no character or one without a known name
 function V.pilotLabel(c)
     local n = c and V.PILOT_NAMES[c]
-    return n and (n..' ('..c..')') or tostring(c)
+    return n or V.tr('not found')
 end
+-- 'Beluga' from 'Car/Beluga'; "not found" without one
+function V.modelLabel(m) return m and (m:match('/(.+)$') or m) or V.tr('not found') end
 local function findPilot(p)
     local animCls = V.class('Griffin.VehicleAnimationComponent')
     local fallback = nil
@@ -163,7 +172,7 @@ V.onTick('vehicle', function(dt)
         local okP, pk, path = pcall(findPilot, p)
         if okP and pk and pk ~= V.pilot then
             V.pilot = pk
-            log('character '..V.pilotLabel(pk)..' ('..tostring(path)..')')
+            log('character '..V.pilotLabel(pk)..' ['..tostring(pk)..'] ('..tostring(path)..')')
         end
     else
         nextFind = V.t + 0.5                            -- parts not loaded yet

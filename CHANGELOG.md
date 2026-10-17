@@ -1,3 +1,64 @@
+# v2.1.0 — 17 October 2026
+
+Use joeyhodge's latest UEVR backend,
+[`101726-gow-e-day-poc-p1`](https://github.com/joeyhodge/UEVR/releases/tag/101726-gow-e-day-poc-p1)
+(replace `UEVRBackend.dll` in your UEVR folder with the one from that release). The profile
+files are the same as in v2.0.1; when updating from v2.0.x, replacing
+`scripts/swgr_vr_cockpit.lua` is enough and your settings stay.
+
+**Added**
+- **Ride shake** (Cockpit shake → Ride shake; off by default). For players who don't get motion
+  sick and want more sense of speed. Part of the shake goes to the world: the cockpit itself
+  shakes with the vehicle (the vehicle body `CustomisationRoot` is moved; on podracers the pod
+  mesh, at most 6 cm / 4°) and the VR world shakes along. Six amounts — trembling: world share,
+  sways: world share, smooth: driving, smooth: boosts and hits, trembling in the air, landing
+  slam — plus "Ride shake: tilt" in Fine tuning → All shaking: head spring. The cockpit keeps rumbling while the ramjet or
+  the afterburner is on. Saved per vehicle; no recommended values (what is fine differs from
+  person to person). Works best with the follow modes 3 to 5.
+- **Landing slam** (Ride shake): its size follows how fast you fell and how long you flew. A
+  short hop barely bumps, a long flight slams; a soft limit keeps the biggest ones bearable.
+- **Afterburner rumble** (Fine tuning → Boost lunge and nose lift): a heavy shudder while the
+  afterburner burns, so a boost feels different from just driving fast.
+- **Shake masters per vehicle type**: pick Bike / Landspeeder / Skimmer / Podracer and scale its
+  shake. "Master: default amounts" multiplies the amounts you did not set for a vehicle,
+  "Master: saved amounts" the ones you did; 0–300 %, 0 = off. Ride shake has its own type
+  picker and its own two masters.
+- **Brightness per map** (new section): for maps that look too bright or washed out in VR.
+  Two eye-adaptation values (for the outside that looks blown out while you are in a tunnel),
+  brightness (exposure), bright parts, bloom, colour strength (saturation) and contrast. Saved
+  for the map you are on only; the other maps stay as the game shows them. **Saved maps** lists
+  them, editable from anywhere.
+- **Game scenes and cameras** (View and eye position): the cockpit now steps aside for the
+  game's **takedown** camera (about 2 s) and **finish line** camera (about 5 s), each with its
+  own switch, grouped with the race intro and crash camera switches.
+- **Look back**: the game's own look back works in the cockpit view (it shows the game's rear
+  camera), and a new hotkey turns you round in the cockpit seat while you hold it — **right
+  stick up** by default, change it in Hotkeys. One switch turns both off.
+- The game's **Change Camera** button is no longer passed to the game while you race in the
+  cockpit: it did nothing there but nudged the HUD on every press. The script follows the
+  game's control scheme (Default: RB, Alternative: right stick click); menus and the game
+  cameras are not affected.
+- **"5. Exactly like the vehicle"** sets the banking the game was designed with (Banking 200,
+  maximum 90, amount 0.55) at once. Values you set for a vehicle stay when you switch modes.
+  The live lean of the vehicle and of your view is shown under Banking.
+- Saved vehicles also list the Ride shake values.
+
+**Changed**
+- The race-start lunge fires only when you actually accelerate.
+- Eye position range: sideways ±160, forward / back ±200, up / down −100 to 250 cm.
+- Cut distance (near clip) up to 150 cm. The near clip plane is sent to the game less often
+  (fewer projection updates in UEVR).
+- Menu: a reset arrow in front of every value (it brings back the default; for a `[vehicle]`
+  value it forgets it), labels no longer cut off (the reset buttons stay clickable), colours
+  (light blue = your vehicle / character / map, red = Ride shake and the motion-sickness mode),
+  follow modes numbered 1–5 ("2. Follow hills" is the most comfortable), vehicles and
+  characters shown by name ("not found" when there is none), hotkeys grouped per action.
+- Korean menu: controller buttons translated.
+
+**HDR monitors**
+- If parts of the picture are completely black on an HDR monitor, set the two HDR lines in the
+  profile's `user_script.txt` to 1: `r.AllowHDR 1` and `r.HDR.EnableHDROutput 1`.
+
 # v2.0.1 — 15 October 2026
 
 - Podracers in the campaign's memory races (pawn class `VBP_Plane_Memory_C`) were not

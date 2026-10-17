@@ -1,13 +1,52 @@
 -- The menu (UEVR > Script UI): a few big groups, amounts in % (100 = recommended).
 local log = V.logger('menu')
 local S = V.cam
-local tr, tip = V.tr, V.tip
+local tr = V.tr
+
+-- colours (ABGR): test features yellow, values saved for a vehicle light blue, warnings orange,
+-- explanations grey, the ride shake and motion-sickness warnings red. Plain white text if this UEVR
+-- build can't colour.
+local COL = { test = 0xFF5ADCFF, own = 0xFFFFC878, warn = 0xFF3CA0FF, info = 0xFFB4B4B4, danger = 0xFF5A5AFF, head = 0xFF96DCFF }
+local function colorText(text, col)
+    if not pcall(imgui.text_colored, text, col) then imgui.text(text) end
+end
+-- colour of the next widget's label (and value); true if pushed, to be popped with popColor
+local function pushColor(col)
+    if not col then return false end
+    local signed = col >= 0x80000000 and col - 0x100000000 or col      -- (the binding takes an int)
+    local ok = pcall(imgui.push_style_color, 0, signed)                  -- (0 = ImGuiCol_Text)
+    return ok
+end
+local function popColor(pushed) if pushed then pcall(imgui.pop_style_color, 1) end end
+
+-- Rows: [slider / combo][reset][label]. The reset is a small arrow, there while the value differs from
+-- its default (reset = { fn = what it does, def = the default as text }); without one its place stays
+-- empty, so all the labels line up (2026-10-17: the "default" button after a label took room and got
+-- cut off). The row's tooltip shows while the widget or its label is hovered (pendingHover, read by
+-- the next tip); a label cut off at the window's edge is shown on top of it (pendingCut).
+local pendingCut, pendingHover = nil, nil
+local function tip(en)
+    local cut, hov = pendingCut, pendingHover
+    pendingCut, pendingHover = nil, nil
+    if hov == nil then
+        if not cut then return V.tip(en) end
+        local ok, h = pcall(imgui.is_item_hovered)
+        hov = ok and h
+    end
+    if not hov then return end
+    local t = tr(en)
+    pcall(imgui.set_tooltip, V.wrap(cut and (t ~= '' and cut..'\n'..t or cut) or t))
+end
 
 -- Widget width: ImGui sliders / combos fill the line and push their label off the right edge.
--- They are given "full width minus LABEL_W" so the label stays readable: per widget with
--- set_next_item_width if this UEVR build has it, else push_item_width around the whole menu, else
--- the label is written on its own line above the widget.
-local LABEL_W = 270
+-- With set_next_item_width they all end at the same place: the label column on the right is as wide
+-- as the widest label (with the reset place) of the last frame, at most LABEL_MAX of the window, so
+-- the sliders line up and widening the window shows the whole labels; a label that still doesn't fit
+-- is shown on top of its tooltip. Sliders are at least MIN_W wide. Without calc_text_size: "full
+-- width minus LABEL_W". Else push_item_width around the whole menu, else the label is written on its
+-- own line above the widget (and a reset is a "default" button after it).
+local LABEL_W, MIN_W, LABEL_MAX = 270, 110, 0.6
+local labelCol, labelColNow = LABEL_W, 0      -- the label column of the last frame / widest one so far
 local widthMode = nil                      -- 'next' / 'push' / 'above'
 local function detectWidthMode()
     local okN, fnN = pcall(function() return imgui.set_next_item_width end)
@@ -17,47 +56,111 @@ local function detectWidthMode()
     if okP and okQ and type(fnP) == 'function' and type(fnQ) == 'function' then return 'push' end
     return 'above'
 end
--- call right before a slider / combo; returns the label to use
-local function sized(label)
+-- the reset place: a square of the widget's height
+local function slotSize()
+    local ok, h = pcall(function() return imgui.calc_text_size('A').y end)
+    return (ok and tonumber(h) or 16) + 6
+end
+-- before a row's widget: its width (or, 'above', the label on its own line); returns the widget's id label
+local function rowStart(text, id, col)
+    pendingCut, pendingHover = nil, nil
     if widthMode == 'next' then
-        pcall(function() imgui.set_next_item_width(-LABEL_W) end)
+        local ok = pcall(function()
+            local tw = imgui.calc_text_size(text).x + slotSize() + 8
+            if tw > labelColNow then labelColNow = tw end
+            local right = imgui.get_window_size().x - 30                   -- (padding, scroll bar)
+            local cx = imgui.get_cursor_pos().x
+            local cw = math.min(labelCol, right * LABEL_MAX)
+            local w = math.max(MIN_W, right - cx - cw - 12)
+            imgui.set_next_item_width(w)
+            if cx + w + 12 + tw > right then pendingCut = text end
+        end)
+        if not ok then pcall(function() imgui.set_next_item_width(-LABEL_W) end) end
     elseif widthMode == 'above' then
-        imgui.text(label:match('^(.-)##') or label)
-        return '##'..(label:match('##(.*)$') or label)
+        if not pcall(imgui.text_colored, text, col) then imgui.text(text) end
     end
-    return label
+    return '##'..id
+end
+-- after a row's widget (hov: the widget was hovered): the reset and the label
+local function rowEnd(text, id, reset, col, hov)
+    if widthMode == 'above' then
+        if reset then
+            imgui.same_line()
+            if imgui.button(tr('default')..'##r'..id) then reset.fn() end
+        end
+        pendingHover = hov
+        return
+    end
+    imgui.same_line()
+    if reset then
+        if imgui.arrow_button('##r'..id, 0) then reset.fn() end          -- (0 = an arrow to the left)
+        local okR, hovR = pcall(imgui.is_item_hovered)
+        if okR and hovR then pcall(imgui.set_tooltip, tr('Back to default')..(reset.def and (': '..reset.def) or '')) end
+    else
+        local s = slotSize()
+        pcall(imgui.invisible_button, '##e'..id, { s, s })
+    end
+    imgui.same_line()
+    local pushed = pushColor(col)
+    imgui.text(text)
+    popColor(pushed)
+    local okL, hovL = pcall(imgui.is_item_hovered)
+    pendingHover = hov or (okL and hovL) or false
+end
+local function hovered()
+    local ok, h = pcall(imgui.is_item_hovered)
+    return ok and h or false
 end
 
--- slider with a value format when this UEVR build supports it (falls back to the plain slider)
+-- slider row with a value format when this UEVR build supports it (falls back to the plain slider).
+-- label: 'text##id' (or ###id); reset: see above; col: the label's colour
 local fmtOK = nil
-local function slider(label, value, lo, hi, fmt)
-    label = sized(label)
+local function slider(label, value, lo, hi, fmt, reset, col)
+    local text = label:match('^(.-)##') or label
+    local id = label:match('##+(.*)$') or label
+    local wl = rowStart(text, id, col)
+    local c, v
     if fmt and fmtOK ~= false then
-        local ok, c, v = pcall(imgui.slider_float, label, value, lo, hi, fmt)
-        if ok then fmtOK = true; return c, v end
-        fmtOK = false
+        local ok, c1, v1 = pcall(imgui.slider_float, wl, value, lo, hi, fmt)
+        if ok then fmtOK = true; c, v = c1, v1 else fmtOK = false end
     end
-    return imgui.slider_float(label, value, lo, hi)
+    if c == nil then c, v = imgui.slider_float(wl, value, lo, hi) end
+    rowEnd(text, id, reset, col, hovered())
+    return c, v
 end
 local function round(x) return math.floor(x + 0.5) end
--- percent slider bound to a table field; returns true when changed
+-- a reset to def for a value of a table (nil while it is at its default)
+local function resetTo(tbl, key, def, fmt)
+    local cur = tonumber(tbl[key])
+    if cur == nil or math.abs(cur - def) < 0.0005 then return nil end
+    return { fn = function() tbl[key] = def; V.save() end, def = string.format(fmt or '%g', def) }
+end
+-- percent slider bound to a table field (in V.cfg: back to its default); returns true when changed
 local function pctSlider(label, tbl, key, id, tipEn)
-    local c, v = slider(label..'##'..id, tonumber(tbl[key]) or 100, 0, 200, '%.0f %%')
+    local def = (tbl == V.cfg and tonumber(V.DEFAULTS[key])) or 100
+    local c, v = slider(label..'##'..id, tonumber(tbl[key]) or def, 0, 200, '%.0f %%', resetTo(tbl, key, def, '%.0f'))
     if tipEn then tip(tipEn) end
     if c then tbl[key] = round(v); return true end
     return false
 end
-local function checkbox(label, value, id, tipEn)
+local function checkbox(label, value, id, tipEn, col)
+    pendingCut, pendingHover = nil, nil
+    local pushed = pushColor(col)
     local c, v = imgui.checkbox(label..'##'..id, value)
+    popColor(pushed)
     if tipEn then tip(tipEn) end
     return c, v
 end
-local function combo(label, list, current, id, tipEn)
+local function combo(label, list, current, id, tipEn, col)
     local idx = 1
     for i, item in ipairs(list) do if item[1] == current then idx = i end end
     local names = {}
     for i, item in ipairs(list) do names[i] = tr(item[2]) end
-    local c, v = imgui.combo(sized(label..'##'..id), idx, names)
+    local wl = rowStart(label, id, col)
+    local pushed = pushColor(col)
+    local c, v = imgui.combo(wl, idx, names)
+    popColor(pushed)
+    rowEnd(label, id, nil, col, hovered())
     if tipEn then tip(tipEn) end
     if c and list[v] then return list[v][1] end
     return nil
@@ -68,12 +171,16 @@ local function typeName(ty)
 end
 -- a group (tree node) with a description on hover; named by its id alone, so the label may change
 -- (counts, markers) without the group closing
-local function section(label, id, tipEn)
+local function section(label, id, tipEn, col)
+    pendingCut, pendingHover = nil, nil
+    local pushed = pushColor(col)
     local open = imgui.tree_node(label..'###'..id)
+    popColor(pushed)
     if tipEn then tip(tipEn) end
     return open
 end
 local function button(label, id, tipEn)
+    pendingCut, pendingHover = nil, nil
     local c = imgui.button(label..'##'..id)
     if tipEn then tip(tipEn) end
     return c
@@ -92,8 +199,8 @@ local function disabledBegin()
 end
 local function disabledEnd(started) if started then pcall(function() imgui.end_disabled() end) end end
 -- an explanation written into the menu (wrapped, for things nobody can guess)
-local function help(en)
-    for line in (V.wrap(tr(en))..'\n'):gmatch('(.-)\n') do imgui.text('  '..line) end
+local function help(en, col)
+    for line in (V.wrap(tr(en))..'\n'):gmatch('(.-)\n') do colorText('  '..line, col or COL.info) end
 end
 -- (no "%" in imgui.text / tooltips: some UEVR builds treat that text as a format string)
 
@@ -102,11 +209,11 @@ local CAMERA_MODES = {
     { 'game', 'Game cameras (third person / bonnet)' },
 }
 local LOCKS = {
-    { 'track', 'Level horizon (most comfortable)' },
-    { 'hills', 'Follow hills (up / down only)' },
-    { 'smooth', 'Follow the vehicle, smoothed (recommended)' },
-    { 'light', 'Follow the vehicle, lightly smoothed' },
-    { 'pilot', 'Exactly like the vehicle (motion sickness!)' },
+    { 'track', '1. Level horizon' },
+    { 'hills', '2. Follow hills (most comfortable)' },
+    { 'smooth', '3. Follow the vehicle, smoothed (recommended)' },
+    { 'light', '4. Follow the vehicle, lightly smoothed' },
+    { 'pilot', '5. Exactly like the vehicle (motion sickness!)' },
 }
 local PILOT = {
     { 'head', 'Hide the head (hands and body stay)' },
@@ -127,7 +234,41 @@ local FEEL = {
 }
 local BANK = { 'roll', 'Banking',
     'How much the view leans sideways with the vehicle in turns. 100 = recommended, 50 = half, 0 = always level, 200 = double. Bikes and planes lean very hard (up to 90 degrees when drifting): lower it if that is too much.' }
+-- the shaking-along amounts in the Cockpit shake section (saved per vehicle)
+local ALONG_SLIDERS = {
+    { 'shakeAlong', '  Trembling: world share' },
+    { 'shakeAlongMove', '  Sways: world share' },
+    { 'shakeAlongSmooth', '  Smooth: driving' },
+    { 'shakeAlongSmooth2', '  Smooth: boosts and hits' },
+    { 'shakeAlongAir', '  Trembling in the air' },
+    { 'shakeAlongLand', '  Landing slam' },
+}
 local FOLLOW_KEYS = { 'followUp', 'followFwd' }
+-- the ride shake values have no recommended value (what is fine differs from person to person)
+for _, k in ipairs({ 'alongTilt', 'shakeAlong', 'shakeAlongMove', 'shakeAlongSmooth', 'shakeAlongSmooth2', 'shakeAlongAir', 'shakeAlongLand' }) do
+    if V.TUNE_INDEX[k] then V.TUNE_INDEX[k].noRec = true end
+end
+-- picture per map: { key, label, lo, hi, format, description }
+local PIC_ROWS = {
+    { 'picLow', 'Adaptation: ignore the dark part', 0, 98, '%.0f',
+      'When the game measures how bright the picture is, it leaves out this share of the darkest pixels (the dark tunnel walls, the cockpit). Higher = it brightens less for dark surroundings, the bright outside stays right. 0 = the game\'s own (Unreal\'s default leaves out 10 of 100). Up to 98: then only the brightest bit counts.' },
+    { 'picMinEV', 'Adaptation: least light it brightens for', 0, 15, '%.1f',
+      'Dark places are not brightened beyond this (camera EV: higher = it stops brightening sooner); bright places are not touched. In a tunnel: raise it slowly until the outside looks right. If the outside in daylight also gets darker, it is too high. 0 = the game\'s own.' },
+    { 'picExp', 'Brightness (exposure)', -3, 1, '%.1f',
+      'The whole picture darker or brighter, in camera stops: -1 = half as bright, -2 = a quarter, +1 = double. Added on top of what the map and its weather set. 0 = as the game does it.' },
+    { 'picHi', 'Bright parts', 30, 150, '%.0f %%',
+      'Only the bright parts of the picture (sky, sunlit sand, glare) darker or brighter; the darker parts stay. For the blown-out look. 100 = as the game does it.' },
+    { 'picBloom', 'Bloom (glow around bright things)', 0, 200, '%.0f %%',
+      'The glow that spreads around bright things. In VR it can fog the whole view. 0 = no glow, 100 = as the game does it.' },
+    { 'picSat', 'Colour strength (saturation)', 50, 200, '%.0f %%',
+      'How strong the colours are. Above 100 = stronger colours. 100 = as the game does it.' },
+    { 'picCon', 'Contrast', 50, 150, '%.0f %%',
+      'Difference between dark and bright. Above 100 = darker darks, brighter brights. 100 = as the game does it.' },
+}
+-- the shake master amounts are per vehicle type; the type they show (the one driven, else picked)
+local MASTER_TYPES = { { 'Bike', 'Bike' }, { 'Car', 'Landspeeder' }, { 'Skimmer', 'Skimmer' }, { 'Plane', 'Podracer' } }
+local masterType, masterSeen = 'Bike', nil
+local rideType, rideSeen = 'Bike', nil         -- (the ride shake masters: their own type, apart)
 local VEH_KEYS = { 'followUp', 'followFwd', 'near' }   -- shown in each saved vehicle
 
 -- Values saved per vehicle. m = the vehicle (the one driven, or one in "Saved vehicles"). Without a
@@ -135,45 +276,49 @@ local VEH_KEYS = { 'followUp', 'followFwd', 'near' }   -- shown in each saved ve
 -- user changes is stored for the vehicle ("[vehicle]"); the others keep following the shared value.
 local function ownMark(own) return own and tr('[vehicle] ') or '' end
 -- builtin: this vehicle's built-in default as text (nil = none, it uses the shared value)
+-- rec nil: no recommended value (the ride shake: what is fine differs from person to person)
 local function ownTip(tipEn, m, own, shared, rec, builtin)
     local note
     if not m then
         note = tr('Get into a vehicle to change it (saved for that vehicle).')
     elseif own then
         note = tr('Saved for this vehicle. Default: ')..(builtin or shared)..(builtin and tr(' (this vehicle)') or tr(' (shared)'))
-            ..tr(', recommended: ')..rec
+            ..(rec and tr(', recommended: ')..rec or '')
     elseif builtin then
         note = tr('This vehicle\'s own default (shared value: ')..shared
-            ..tr('). Touch it and your value is saved for this vehicle. Recommended: ')..rec
+            ..(rec and tr('). Touch it and your value is saved for this vehicle. Recommended: ')..rec
+                or tr('). Touch it and your value is saved for this vehicle.'))
     else
-        note = tr('Not changed for this vehicle: follows the shared value. Touch it and it is saved for this vehicle. Recommended: ')..rec
+        note = rec and tr('Not changed for this vehicle: follows the shared value. Touch it and it is saved for this vehicle. Recommended: ')..rec
+            or tr('Not changed for this vehicle: follows the shared value. Touch it and it is saved for this vehicle.')
     end
     local t = tr(tipEn)
     tip(t ~= '' and t..'\n'..note or note)
 end
-local function ownReset(own, kind, m, key, id)
-    if not own then return end
-    imgui.same_line()
-    if button(tr('default'), id..'x', 'Forgets the value you set for this vehicle: back to its default (the vehicle\'s own default if it has one, else the shared value).') then V.clearOwnVal(kind, m, key) end
-end
 -- one fine-tuning value of vehicle m; true if the vehicle has its own
-local function tuneSlider(item, m, id, label)
+local function tuneSlider(item, m, id, label, fmt, col, noRec)
+    fmt = fmt or '%.2f'
+    noRec = noRec or item.noRec
     local own = V.ownVal('detail', m, item.key)
-    local dis = not m and disabledBegin()
-    local c, v = slider(ownMark(own)..(label or tr(item.en))..'###'..id, V.valFor(m, item.key), item.lo, item.hi, '%.2f')
-    disabledEnd(dis)
+    local tf = fmt:gsub(' ?%%%%', '')            -- (the tooltip: no percent sign)
     local b = V.builtinVal('detail', m, item.key)
-    ownTip(item.tipEn or '', m, own, string.format('%.2f', V.sharedVal(item.key)), string.format('%.2f', item.base), b and string.format('%.2f', b))
+    local reset = own and { fn = function() V.clearOwnVal('detail', m, item.key) end,
+        def = string.format(tf, b or V.sharedVal(item.key)) }
+    local dis = not m and disabledBegin()
+    local c, v = slider(ownMark(own)..(label or tr(item.en))..'###'..id, V.valFor(m, item.key), item.lo, item.hi, fmt, reset, col or (own and COL.own))
+    disabledEnd(dis)
+    if fmt:sub(1, 4) == '%.0f' then v = round(v) end
+    ownTip(item.tipEn or '', m, own, string.format(tf, V.sharedVal(item.key)), not noRec and string.format(tf, item.base) or nil, b and string.format(tf, b))
     if c and m then V.setOwnVal('detail', m, item.key, v) end
-    ownReset(own, 'detail', m, item.key, id)
     return own ~= nil
 end
 -- body follow of vehicle m with character c (saved for that pair; else the vehicle's value)
 local function followSlider(item, m, c, id, label)
     local own = V.followOwn(m, c, item.key)
-    local cv, v = slider((own and tr('[vehicle+character] ') or '')..(label or tr(item.en))..'###'..id,
-        V.followVal(m, c, item.key), item.lo, item.hi, '%.2f')
     local d = string.format('%.2f', V.pilotBuiltin(m, c, item.key) or V.valFor(m, item.key))
+    local reset = own and { fn = function() V.clearFollowVal(m, c, item.key) end, def = d }
+    local cv, v = slider((own and tr('[vehicle+character] ') or '')..(label or tr(item.en))..'###'..id,
+        V.followVal(m, c, item.key), item.lo, item.hi, '%.2f', reset, own and COL.own)
     local t = tr(item.tipEn or '')
     if own then
         tip(t..tr('\nSaved for this vehicle and character. Default: ')..d)
@@ -181,22 +326,29 @@ local function followSlider(item, m, c, id, label)
         tip(t..tr('\nNot changed for this character: uses the default ')..d..tr('. Touch it and it is saved for this vehicle and character.'))
     end
     if cv then V.setFollowVal(m, c, item.key, v) end
-    if own then
-        imgui.same_line()
-        if button(tr('default'), id..'x', 'Forgets the value for this vehicle and character.') then V.clearFollowVal(m, c, item.key) end
-    end
     return own ~= nil
 end
 -- a % amount of vehicle m (banking or a shake group: { key, en, tipEn }); true if own
+-- a picture value of map m (nil = no map: greyed out); saved for that map, light blue when it has one
+local function picSlider(m, r, idp)
+    local key, fmt = r[1], r[5]
+    local neutral = V.PIC_NEUTRAL[key]
+    local own = m and V.picOwn(key, m)
+    local f = fmt == '%.1f' and '%.1f' or '%.0f'
+    local reset = own and { fn = function() V.setPicVal(m, key, neutral) end, def = string.format(f, neutral) }
+    local c, v = slider(tr(r[2])..'##'..idp..key, V.picVal(key, m or '?'), r[3], r[4], fmt, reset, own and COL.own)
+    tip(r[6])
+    if c and m then V.setPicVal(m, key, fmt == '%.1f' and math.floor(v * 10 + 0.5) / 10 or round(v)) end
+end
 local function pctOwnSlider(p, m, id)
     local own = V.ownVal('feel', m, p[1])
-    local dis = not m and disabledBegin()
-    local c, v = slider(ownMark(own)..tr(p[2])..'###'..id, V.pctFor(m, p[1]), 0, 200, '%.0f %%')
-    disabledEnd(dis)
     local b = V.builtinVal('feel', m, p[1])
+    local reset = own and { fn = function() V.clearOwnVal('feel', m, p[1]) end, def = tostring(round(b or V.sharedPct(p[1]))) }
+    local dis = not m and disabledBegin()
+    local c, v = slider(ownMark(own)..tr(p[2])..'###'..id, V.pctFor(m, p[1]), 0, 200, '%.0f %%', reset, own and COL.own)
+    disabledEnd(dis)
     ownTip(p[3], m, own, tostring(round(V.sharedPct(p[1]))), '100', b and tostring(round(b)))
     if c and m then V.setOwnVal('feel', m, p[1], round(v)) end
-    ownReset(own, 'feel', m, p[1], id)
     return own ~= nil
 end
 -- Fine tuning by topic, so everything about one thing (e.g. landings) is in one place, roughly in
@@ -205,13 +357,13 @@ local TUNE_LAYOUT = {
     { 'engine', 'Engine', { 'idle', 'idleRev', 'cruise' } },
     { 'road', 'Road and corners', { 'road', 'bumps', 'corner', 'accel', 'drift', 'draft' } },
     { 'lunge', 'Boost lunge and nose lift',
-      { 'ramjet', 'afterburner', 'launch', 'ebrake', 'lungeMax', 'fwdScale', 'nod', 'lowHum', 'heatShake' } },
+      { 'ramjet', 'afterburner', 'abRumble', 'launch', 'ebrake', 'lungeMax', 'fwdScale', 'nod', 'lowHum', 'heatShake' } },
     { 'boostfx', 'Boost screen, hit-stop, warp',
       { 'flashRJ', 'flashAB', 'satRJ', 'satAB', 'vigRJ', 'vigAB', 'fadeOut', 'hitstopStrength', 'hitstopAB', 'hitstopTime', 'warpAmount' } },
     { 'landing', 'Landings and hits',
       { 'airLift', 'landing', 'landFloor', 'landLean', 'landHit', 'landHitHz', 'headHitPitch', 'headHitRoll', 'headHitHz', 'nearLow', 'impact' } },
     { 'view', 'View (banking)', { 'rollAmount', 'rollMax' } },
-    { 'spring', 'All shaking: head spring', { 'springHz', 'damping' } },
+    { 'spring', 'All shaking: head spring', { 'springHz', 'damping', 'alongTilt' } },
     { 'start', 'Race start', { 'leaveDelay', 'blendTime', 'carIdle', 'carRev' } },
 }
 local tuneGroups = nil
@@ -279,8 +431,8 @@ local function drawMenu()
         'If you sit off-centre or too far forward / back: sit straight in your real chair and press this. Your current head position becomes the middle of the seat.') then S.recenter() end
     -- per-vehicle values: what you change while driving is saved for that vehicle only
     if V.model then
-        imgui.text(string.format(tr('Vehicle: %s (%s)'), V.model, typeName(V.vtype))
-            ..(V.pilot and string.format(tr('   Character: %s'), V.pilotLabel(V.pilot)) or ''))
+        colorText(string.format(tr('Vehicle: %s (%s)'), V.modelLabel(V.model), typeName(V.vtype))
+            ..string.format(tr('   Character: %s'), V.pilotLabel(V.pilot)), COL.own)
         tip('The vehicle you are driving now (type / model).')
         help(string.format(tr('-> What you change now (eye position, banking, body follow, cut distance, shake, fine tuning) is saved for %s only. What you don\'t touch keeps its default.'), V.model))
     else
@@ -297,17 +449,27 @@ local function drawMenu()
             if locked then
                 help('No vehicle yet: showing the default eye position. Get into a vehicle to adjust it; your change is saved for that vehicle.')
             else
-                imgui.text(string.format(tr('Eye position (%s): %s'), V.model,
-                    ownEye and tr('saved for this vehicle') or tr('default position')))
+                colorText(string.format(tr('Eye position (%s): %s'), V.modelLabel(V.model),
+                    ownEye and tr('saved for this vehicle') or tr('default position')), COL.own)
                 tip('Saved automatically for the vehicle you drive as soon as you move a slider.')
             end
             local x, y, z = e[1], e[2], e[3]
+            local de = V.defaultEyeFor(V.model)
+            local function eyeReset(i)
+                if locked or not ownEye or math.abs((tonumber(e[i]) or 0) - de[i]) < 0.05 then return nil end
+                return { fn = function()
+                    local ne = { x, y, z }
+                    ne[i] = de[i]
+                    if math.abs(ne[1] - de[1]) + math.abs(ne[2] - de[2]) + math.abs(ne[3] - de[3]) < 0.05 then V.resetEye()
+                    else V.setEye(ne[1], ne[2], ne[3]) end
+                end, def = string.format('%.1f', de[i]) }
+            end
             local dis = locked and disabledBegin()
-            local c1, v1 = slider(tr('Sideways (cm)')..'##eyeX', x, -60, 60, '%.1f')
+            local c1, v1 = slider(tr('Sideways (cm)')..'##eyeX', x, -160, 160, '%.1f', eyeReset(1))
             tip('Moves your eyes left / right in the seat. Saved for this vehicle.')
-            local c2, v2 = slider(tr('Forward / back (cm)')..'##eyeY', y, -100, 100, '%.1f')
+            local c2, v2 = slider(tr('Forward / back (cm)')..'##eyeY', y, -200, 200, '%.1f', eyeReset(2))
             tip('Moves your eyes forward / back. Use it if the dashboard is too close or too far.')
-            local c3, v3 = slider(tr('Up / down (cm)')..'##eyeZ', z, 0, 150, '%.1f')
+            local c3, v3 = slider(tr('Up / down (cm)')..'##eyeZ', z, -100, 250, '%.1f', eyeReset(3))
             tip('Moves your eyes up / down. Use it if you feel you sit too low or too high.')
             disabledEnd(dis)
             if not locked and (c1 or c2 or c3) then V.setEye(c1 and v1 or x, c2 and v2 or y, c3 and v3 or z) end
@@ -315,24 +477,28 @@ local function drawMenu()
                 'Forgets the eye position saved for this vehicle.') then V.resetEye() end
         end
         local l = combo(tr('Follow the vehicle'), LOCKS, S.cameraLock, 'lock',
-            'How much the view tilts with the vehicle when it pitches over hills and leans in turns. Higher in the list = more comfortable, lower = more alive. If you get motion sick, pick "Level horizon".')
-        if l then S.cameraLock = l; V.cfg.cameraLock = l; ch = true end
+            'How much the view tilts with the vehicle when it pitches over hills and leans in turns. Higher in the list = more comfortable, lower = more alive. If you get motion sick, pick "Level horizon". "Exactly like the vehicle" leans as the game designed it, like the original cockpit script: it sets Banking to 200, maximum 90, amount 0.55.', S.cameraLock == 'pilot' and COL.danger or nil)
+
+        if l then S.cameraLock = l; V.cfg.cameraLock = l; V.syncBankingMode(l); ch = true end
+        if S.cameraLock == 'pilot' then
+            help('"Exactly like the vehicle": the view leans as the game designed it (like the original cockpit script) - Banking 200, maximum 90, amount 0.55. Want more lean? Raise the amount in Fine tuning > View (banking). What you set while driving a vehicle is saved for it ([vehicle]) and stays when you switch modes.', COL.danger)
+        end
         pctOwnSlider(BANK, V.model, 'v_roll')
+        local rn = S.rollNow
+        if rn and S.enabled then
+            imgui.text(string.format(tr('  Now: the vehicle leans %.0f deg, your view %.0f deg'), rn[1], rn[2]))
+            tip('Live, while you drive. With the add-on effects off and "Exactly like the vehicle" both are the same (as in the original cockpit script). Banking, the follow mode and the shake change the second one.')
+        end
         local p = combo(tr('Pilot'), PILOT, S.pilotVisibility == 'visible' and V.cfg.pilot or S.pilotVisibility, 'pilot',
             'How much of your pilot you see in the cockpit. The head is in the same place as your eyes, so it is usually hidden.')
         if p then S.setPilotMode(p) end
-        local c, v = checkbox(tr('Show the race intro flyover'), S.showCinematics, 'cine',
-            'Before a race the game flies the camera over the track. On: you watch it with the game camera, then the cockpit takes over. Off: cockpit from the start.')
-        if c then S.showCinematics = v; V.cfg.showCinematics = v; ch = true end
-        c, v = checkbox(tr('Outside view when crashing'), S.showCrashCamera, 'crash',
-            'On: when you crash or tumble, the game\'s crash camera shows the wreck from outside. Off: you stay in the cockpit (can be wild).')
-        if c then S.showCrashCamera = v; V.cfg.showCrashCamera = v; ch = true end
+        local c, v
         c, v = checkbox(tr('Follow the pilot on jumps'), V.cfg.bodyFollow, 'follow',
             'On jumps (mostly bikes) the rider stands up in the air. Your eyes stay at the seat, so you would end up inside the rider\'s body. On: your eyes move with the body while airborne.')
         if c then V.cfg.bodyFollow = v; ch = true end
         if V.cfg.bodyFollow then
-            if V.model and V.pilot then
-                imgui.text(string.format(tr('  Saved for this vehicle and character (%s)'), V.pilotLabel(V.pilot)))
+            if V.model then
+                colorText(string.format(tr('  Saved automatically for %s + %s'), V.modelLabel(V.model), V.pilotLabel(V.pilot)), COL.own)
                 tip('Characters differ in build and posture, so the same vehicle can need other values for each character.')
             end
             for _, key in ipairs(FOLLOW_KEYS) do
@@ -348,6 +514,25 @@ local function drawMenu()
             local item = V.TUNE_INDEX.near
             tuneSlider(item, V.model, 'v_near', '  '..tr(item.en))
         end
+        if section(tr('Game scenes and cameras'), 'gamecams',
+            'When the game shows its own scenes and cameras (race intro, crash, takedown, finish line, look back) the cockpit can step aside; and looking back from the cockpit seat.') then
+            c, v = checkbox(tr('Show the race intro flyover'), S.showCinematics, 'cine',
+                'Before a race the game flies the camera over the track, and after the race it shows its scenes. On: you watch them with the game camera, then the cockpit takes over. Off: cockpit from the start.')
+            if c then S.showCinematics = v; V.cfg.showCinematics = v; ch = true end
+            c, v = checkbox(tr('Outside view when crashing'), S.showCrashCamera, 'crash',
+                'On: when you crash or tumble, the game\'s crash camera shows the wreck from outside. Off: you stay in the cockpit (can be wild).')
+            if c then S.showCrashCamera = v; V.cfg.showCrashCamera = v; ch = true end
+            c, v = checkbox(tr('Show takedowns'), S.showTakedownCamera, 'takedown',
+                'On: when you take a rival down, the game shows it with its own camera for about 2 seconds, then you are back in the cockpit. Off: you stay in the cockpit.')
+            if c then S.showTakedownCamera = v; V.cfg.showTakedownCamera = v; ch = true end
+            c, v = checkbox(tr('Show the finish line camera'), S.showFinishCamera, 'finishcam',
+                'On: when you cross the finish line, the game shows your vehicle from outside for about 5 seconds before the results. Off: you stay in the cockpit until the results.')
+            if c then S.showFinishCamera = v; V.cfg.showFinishCamera = v; ch = true end
+            c, v = checkbox(tr('Look back'), S.showLookBack, 'lookback',
+                'Lets you look back in the cockpit view, which you couldn\'t before: the game\'s own look back shows its rear camera, and the cockpit look back hotkey (right stick up unless changed) turns you round in the cockpit seat while you hold it. Change that button in Hotkeys. Off: neither.')
+            if c then S.showLookBack = v; V.cfg.showLookBack = v; ch = true end
+            imgui.tree_pop()
+        end
         imgui.tree_pop()
     end
 
@@ -359,9 +544,49 @@ local function drawMenu()
         if c then V.cfg.feelOn = v; ch = true end
         local vm, anyOwn = V.model, false
         for _, f in ipairs(FEEL) do anyOwn = pctOwnSlider(f, vm, 'f'..f[1]) or anyOwn end
+        -- overall strength per vehicle type: the default amounts and the ones saved for a vehicle, apart
+        -- (the type shown follows the vehicle you get into; another one can be picked)
+        if V.vtype and V.vtype ~= masterSeen then masterSeen, masterType = V.vtype, V.vtype end
+        local mt = combo(tr('Master: vehicle type'), MASTER_TYPES, masterType, 'masterType',
+            'Which vehicle type the two master amounts below are for. Each type has its own. It starts at the type you are driving.')
+        if mt then masterType = mt end
+        local kd, ks = 'shakeDefault_'..masterType, 'shakeSaved_'..masterType
+        local cd, vd = slider(tr('Master: default amounts')..'##shakeDefault', tonumber(V.cfg[kd]) or 100, 0, 300, '%.0f %%',
+            resetTo(V.cfg, kd, 100, '%.0f'))
+        tip('On every vehicle of this type, multiplies all the shake amounts you did not set for that vehicle (its default or the shared amount). The ones you set for a vehicle stay. 100 = as they are, 50 = half, 200 = double, 0 = off.')
+        if cd then V.cfg[kd] = round(vd); ch = true end
+        local cs, vs = slider(tr('Master: saved amounts')..'##shakeSaved', tonumber(V.cfg[ks]) or 100, 0, 300, '%.0f %%',
+            resetTo(V.cfg, ks, 100, '%.0f'))
+        tip('On every vehicle of this type, multiplies all the shake amounts you set for that vehicle (marked [vehicle]). 100 = as set, 50 = half, 200 = double, 0 = off.')
+        if cs then V.cfg[ks] = round(vs); ch = true end
         c, v = checkbox(tr('Landing hits your head'), V.cfg.headHit, 'headHit',
             'The usual landing moves your view down, which feels like the vehicle jolts while your head stays still. This also snaps the view angle down and back with a little sideways wobble at touchdown, so it feels like your head takes the hit. Fine tuning > Landings and hits has its values.')
         if c then V.cfg.headHit = v; ch = true end
+        -- the ride shake (test): everything about it in red
+        local ca, va = checkbox(tr('Ride shake'), V.cfg.shakeAlongOn, 'shakeAlongOn',
+            'Moves part of the shake from the cockpit to the world: that part moves you with the vehicle and shakes the world. The amounts below are saved per vehicle.', COL.danger)
+        if ca then V.cfg.shakeAlongOn = va; ch = true end
+        help('This option is for extreme users: for those who don\'t get motion sick, or who want even more sense of speed from the game. It works best with the follow modes 3 to 5.', COL.danger)
+        if V.cfg.shakeAlongOn then
+            -- (saved for the vehicle you drive, like the fine tuning; the defaults come later per type)
+            for _, sa in ipairs(ALONG_SLIDERS) do tuneSlider(V.TUNE_INDEX[sa[1]], vm, 'sa_'..sa[1], tr(sa[2]), '%.0f %%', COL.danger, true) end
+            -- its masters: a vehicle type of their own (the cockpit shake's doesn't count here)
+            if V.vtype and V.vtype ~= rideSeen then rideSeen, rideType = V.vtype, V.vtype end
+            local rt = combo(tr('Master: vehicle type'), MASTER_TYPES, rideType, 'rideType',
+                'Which vehicle type the two ride shake master amounts below are for. Each type has its own, apart from the cockpit shake masters. It starts at the type you are driving.', COL.danger)
+            if rt then rideType = rt end
+            local rd, rs = 'rideDefault_'..rideType, 'rideSaved_'..rideType
+            local crd, vrd = slider(tr('Master: default amounts')..'##rideDefault', tonumber(V.cfg[rd]) or 100, 0, 300, '%.0f %%',
+                resetTo(V.cfg, rd, 100, '%.0f'), COL.danger)
+            tip('On every vehicle of this type, multiplies the ride shake amounts (trembling and sways world share, landing slam) you did not set for that vehicle. The ones you set stay. 100 = as they are, 50 = half, 200 = double, 0 = off.')
+            if crd then V.cfg[rd] = round(vrd); ch = true end
+            local crs, vrs = slider(tr('Master: saved amounts')..'##rideSaved', tonumber(V.cfg[rs]) or 100, 0, 300, '%.0f %%',
+                resetTo(V.cfg, rs, 100, '%.0f'), COL.danger)
+            tip('On every vehicle of this type, multiplies the ride shake amounts (trembling and sways world share, landing slam) you set for that vehicle. 100 = as set, 50 = half, 200 = double, 0 = off.')
+            if crs then V.cfg[rs] = round(vrs); ch = true end
+        end
+        local info = V.shakeAlongInfo
+        if V.cfg.shakeAlongOn and info and info.failed then help(tr('Not possible with this vehicle: ')..tostring(info.failed), COL.warn) end
         if anyOwn and button(tr('This vehicle: all shake back to default'), 'feelShared',
             'Forgets the shake amounts you set for this vehicle; back to its defaults.') then
             for _, g in ipairs(V.FEEL_GROUPS) do V.clearOwnVal('feel', vm, g) end
@@ -380,6 +605,20 @@ local function drawMenu()
         c, v = checkbox(tr('Warp pulse at ramjet / race start'), V.cfg.warp, 'warp',
             'At ramjet ignition and the race start the size of the world pulses for a moment (VR world scale), like the speed kick the flat game does by widening the screen.')
         if c then V.cfg.warp = v; ch = true end
+        imgui.tree_pop()
+    end
+
+    -- picture per map ----------------------------------------------------------------------------
+    if section(tr('Brightness per map'), 'picture',
+        'For maps that look too bright in VR. What you change here is saved for the map you are on only; the other maps stay as the game shows them.', COL.test) then
+        local map = V.picMapName()
+        colorText(string.format(tr('Map now: %s'), V.mapLabel(map)), COL.own)
+        help('For a map that looks too bright in VR: what you change here is saved for this map only. Too bright outside while you are inside a tunnel or a building, fine again once out: that is the game\'s eye adaptation brightening for the dark inside - the two adaptation sliders only change dark places; Brightness changes everything.')
+        local dis = not map and disabledBegin()
+        for _, r in ipairs(PIC_ROWS) do picSlider(map, r, 'pic') end
+        disabledEnd(dis)
+        if map and V.veh.maps[map] and button(tr('This map: back to the game\'s picture'), 'picReset',
+            'Forgets the picture values saved for this map: it looks as the game shows it again.') then V.clearPicMap(map) end
         imgui.tree_pop()
     end
 
@@ -414,13 +653,26 @@ local function drawMenu()
     table.sort(names)
     if section(string.format(tr('Saved vehicles (%d)'), #names), 'vehicles',
         'Every vehicle with something saved. Open one to see and change all its values without driving it: untouched values keep their defaults, a value you touch is saved for that vehicle.') then
-        local AX = { { 'Sideways (cm)', -60, 60 }, { 'Forward / back (cm)', -100, 100 }, { 'Up / down (cm)', 0, 150 } }
+        local AX = { { 'Sideways (cm)', -160, 160 }, { 'Forward / back (cm)', -200, 200 }, { 'Up / down (cm)', -100, 250 } }
         for _, name in ipairs(names) do
             if section(name..(name == V.model and tr('  (driving now)') or ''), 'veh'..name) then
                 local e, ownEye = V.eyeFor(name)
                 imgui.text(ownEye and tr('Eye position (saved for this vehicle):') or tr('Eye position (default):'))
+                local de = V.defaultEyeFor(name)
                 for i, a in ipairs(AX) do
-                    local c, v = slider(tr(a[1])..'##ve'..name..i, tonumber(e[i]) or 0, a[2], a[3], '%.1f')
+                    local reset = nil
+                    if ownEye and math.abs((tonumber(e[i]) or 0) - de[i]) >= 0.05 then
+                        reset = { def = string.format('%.1f', de[i]), fn = function()
+                            local ne = { tonumber(e[1]) or 0, tonumber(e[2]) or 0, tonumber(e[3]) or 0 }
+                            ne[i] = de[i]
+                            if math.abs(ne[1] - de[1]) + math.abs(ne[2] - de[2]) + math.abs(ne[3] - de[3]) < 0.05 then V.resetEye(name)
+                            else
+                                V.veh.eyes[name] = ne; V.saveVeh()
+                                if name == V.model then S.setEye(ne[1], ne[2], ne[3]) end
+                            end
+                        end }
+                    end
+                    local c, v = slider(tr(a[1])..'##ve'..name..i, tonumber(e[i]) or 0, a[2], a[3], '%.1f', reset)
                     if c then
                         local ne = { tonumber(e[1]) or 0, tonumber(e[2]) or 0, tonumber(e[3]) or 0 }
                         ne[i] = v
@@ -461,6 +713,9 @@ local function drawMenu()
                 end
                 imgui.text(tr('Shake:'))
                 for _, fg in ipairs(FEEL) do pctOwnSlider(fg, name, 'vf'..name..fg[1]) end
+                -- (the shaking-along amounts of this vehicle; untouched = the shared ones)
+                colorText(tr('Ride shake:'), COL.danger)
+                for _, sa in ipairs(ALONG_SLIDERS) do tuneSlider(V.TUNE_INDEX[sa[1]], name, 'vsa'..name..sa[1], tr(sa[2]), '%.0f %%', COL.danger, true) end
                 local n, vd = 0, V.veh.detail[name]
                 if type(vd) == 'table' then
                     for k in pairs(vd) do local item = V.TUNE_INDEX[k]; if item and not item.main then n = n + 1 end end
@@ -498,15 +753,38 @@ local function drawMenu()
         imgui.tree_pop()
     end
 
+    -- saved maps (picture per map) ---------------------------------------------------------------
+    local maps = {}
+    for m in pairs(V.veh.maps) do maps[#maps + 1] = m end
+    table.sort(maps)
+    if section(string.format(tr('Saved maps (%d)'), #maps), 'maps',
+        'Every map with its own picture values (Brightness per map). Open one to see and change them, or forget them.') then
+        for _, m in ipairs(maps) do
+            if section(V.mapLabel(m)..(m == V.picMapName() and tr('  (here now)') or ''), 'map'..m) then
+                for _, r in ipairs(PIC_ROWS) do picSlider(m, r, 'pm'..m) end
+                if button(tr('Forget this map\'s values'), 'mapdel'..m,
+                    'Forgets the picture values saved for this map: it looks as the game shows it again.') then V.clearPicMap(m) end
+                imgui.tree_pop()
+            end
+        end
+        if #maps == 0 then imgui.text(tr('  (none yet - change something in Brightness per map)')) end
+        imgui.tree_pop()
+    end
+
     -- hotkeys ------------------------------------------------------------------------------------
     if section(tr('Hotkeys'), 'hotkeys',
         'Keys / controller buttons for switching cameras, recentering and switching the add-on effects. Each action can have a keyboard key and a controller combo.') then
-        local padNames = {}
+        local padNames, holdNames = {}, {}
         for i, pd in ipairs(V.HOTKEY_PADS) do padNames[i] = { pd[1], pd[1], pd[1] } end
+        for i, pd in ipairs(V.HOTKEY_PADS_HOLD) do holdNames[i] = { pd[1], pd[1], pd[1] } end
         help('Keyboard: click the button, then press the key you want (Esc = cancel). Controller: pick a combo from the list.')
         V.keyCaptureSeen = V.t                 -- the menu is open: a key capture may go on
-        for _, a in ipairs(V.HOTKEY_ACTIONS) do
-            imgui.text(tr(a.en))
+        -- (each action: a line, its name in colour, its keyboard key and controller button indented under it)
+        for i, a in ipairs(V.HOTKEY_ACTIONS) do
+            if i > 1 then pcall(imgui.spacing) end
+            pcall(imgui.separator)
+            colorText(tr(a.en), COL.head)
+            local indented = pcall(imgui.indent)
             local key = V.cfg['key'..a.id]
             local bound = key ~= nil and key ~= 'None'
             local waiting = V.keyCapture == a.id
@@ -521,9 +799,11 @@ local function drawMenu()
                     V.cfg['key'..a.id] = 'None'; ch = true
                 end
             end
-            local pd = combo(tr('  Controller'), padNames, V.cfg['pad'..a.id], 'p'..a.id,
-                'Hold the Back (View) button and press the second button. The game may also react to that button, so pick one you don\'t use while racing.')
+            local pd = combo(tr('  Controller'), a.hold and holdNames or padNames, V.cfg['pad'..a.id], 'p'..a.id,
+                a.hold and 'Look back from the cockpit seat while you hold it (with "Look back" on in View > Game scenes and cameras). A right stick direction or a single button works here. The game may also react to the button you pick.'
+                    or 'Hold the Back (View) button and press the second button. The game may also react to that button, so pick one you don\'t use while racing.')
             if pd then V.cfg['pad'..a.id] = pd; ch = true end
+            if indented then pcall(imgui.unindent) end
         end
         imgui.tree_pop()
     end
@@ -563,6 +843,8 @@ local function drawMenu()
         if armed then
             V.resetSettings()
             S.cameraLock, S.showCinematics, S.showCrashCamera = V.cfg.cameraLock, V.cfg.showCinematics, V.cfg.showCrashCamera
+            S.showTakedownCamera, S.showFinishCamera = V.cfg.showTakedownCamera, V.cfg.showFinishCamera
+            S.showLookBack = V.cfg.showLookBack ~= false
             S.setPilotMode(V.cfg.pilot)
             S.setCameraMode(V.cfg.cameraMode)
             armReset = 0; ch = true
@@ -578,6 +860,7 @@ end
 callbacks.on_draw_ui(function()
     V.withFont(function()
         if widthMode == nil then widthMode = detectWidthMode(); log('widget width: '..widthMode) end
+        if labelColNow > 0 then labelCol, labelColNow = labelColNow, 0 end     -- (the last frame's widest label)
         if widthMode == 'push' then
             local pushed = pcall(function() imgui.push_item_width(-LABEL_W) end)
             local ok, err = pcall(drawMenu)

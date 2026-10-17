@@ -2,7 +2,7 @@
 -- seat); only pitch is ever rotated (nose lift / nod). Triggers come from the game's VehicleState:
 --   afterburner (AfterburnerState -> 0 Active, burned >= 0.12 s, max once per 1 s) -> forward lunge
 --   ramjet (RamjetState -> 3 Active = real ignition) -> big lunge, nose lift, warp, hum + heat shudder
---   race start (IgnitionPhase 2 PerfectStart -> 3 PostPerfectStart) -> launch
+--   race start (IgnitionPhase 2 PerfectStart -> 3 PostPerfectStart, and you accelerate) -> launch
 --   landing (vertical speed stops falling / LandingState -> 2) -> pressed down, then back
 --   impacts, cornering / drift / slipstream push, road rumble, engine idle and while driving
 -- Fades out while paused or when the AI drives (race finished).
@@ -33,6 +33,7 @@ local GROUPS = {
     },
     boost = {
         T('afterburner', 1.427, 3, 'Afterburner', 'Afterburner (Shift): how hard the view lunges forward when it fires, and the hum / shaking while it burns. 0 = no afterburner effect.'),
+        T('abRumble', 1.0, 3, 'Afterburner rumble', 'A heavy shudder while the afterburner burns, clearly above the road rumble (so a boost feels different from just driving fast). It comes in quickly when the burner fires and fades out after. 0 = none.'),
         T('ramjet', 2.466, 3, 'Ramjet', 'Ramjet (C): the big forward lunge and long rumble when it ignites. 0 = no ramjet lunge / rumble.'),
         T('launch', 1.0, 3, 'Race start launch', 'The forward lunge at the moment the race starts, bigger with a perfect start. 0 = no start lunge.'),
         T('nod', 3.0, 3, 'Nose lift', 'On boosts the view tilts up a little (the nose lifts), on landings it nods down. 0 = the view angle never changes (only the position moves).'),
@@ -73,8 +74,33 @@ V.tunable('boost', 'hitstopAB', 0.077, 0, 1, 'Hit-stop strength (afterburner)', 
 V.tunable('boost', 'hitstopTime', 0.164, 0.05, 0.4, 'Hit-stop length (s)', 'How long the slow-down lasts (seconds). Longer = a longer "freeze".')
 V.tunable('boost', 'warpAmount', 3.0, -5, 5, 'Warp pulse strength (+ / -)', 'At ramjet ignition and the race start the size of the world pulses for a moment (when "Warp pulse" is ticked). Plus = the world briefly shrinks and moves away, minus = it briefly grows and rushes at you. Further from 0 = stronger. 0 = no pulse.')
 
--- % of a group for the current vehicle: its own value if it has one, else the shared one
-function V.feelPct(group) return V.pctFor(V.model, group) end
+-- % of a group for the current vehicle: its own value if it has one, else the shared one. On top, per
+-- vehicle type: one overall % for the amounts saved for a vehicle, one for all the others (its default
+-- or the shared value), so the defaults can be turned up or down without touching what was set by hand.
+-- (Older versions had one pair for every type: it becomes each type's, once.)
+if not V.cfg.shakeMasterByType then
+    for _, ty in ipairs({ 'Bike', 'Car', 'Skimmer', 'Plane' }) do
+        V.cfg['shakeDefault_'..ty] = tonumber(V.cfg.shakeDefault) or 100
+        V.cfg['shakeSaved_'..ty] = tonumber(V.cfg.shakeSaved) or 100
+    end
+    V.cfg.shakeMasterByType = true
+    V.save()
+end
+local function master(kind)
+    local ty = V.vtype or V.typeOf(V.model)
+    return ty and tonumber(V.cfg[kind..'_'..ty]) or 100
+end
+function V.feelPct(group)
+    local own = V.ownVal('feel', V.model, group)
+    if own then return own * master('shakeSaved') / 100 end
+    return (V.builtinVal('feel', V.model, group) or V.sharedPct(group)) * master('shakeDefault') / 100
+end
+-- a ride shake amount (trembling / sways world share, landing slam) through its type's master: the
+-- one for values saved for the vehicle, or the one for the others
+function V.rideVal(key)
+    local own = V.ownVal('detail', V.model, key)
+    return (tonumber(own or V.val(key)) or 0) * master(own and 'rideSaved' or 'rideDefault') / 100
+end
 local cfg = { lungeForward = true }
 local function computeCfg()
     for g, keys in pairs(GROUPS) do
@@ -109,12 +135,14 @@ local K = {
     DRAFT_BUFFET = { [1] = 0.35, [2] = 0.6, [3] = 0.25 },   -- by DraftingState (gaining / maintaining / decaying)
     DRIFT_RUMBLE = 0.3, EBRAKE_KICK = 90,
     LAUNCH_KICK = 110, LAUNCH_KICK_PERFECT = 160, LAUNCH_PUSH = 16, LAUNCH_PUSH_PERFECT = 22,
+    LAUNCH_WAIT = 0.6,                               -- s after the start: the launch needs the throttle by then
     JOLT_HZ = 9, JOLT_DAMP = 0.35, JOLT_TAP = 120,   -- landing: stiff spring, short tap at contact
     LAND_KICK = 90, LAND_PUSH_MIN = 6, LAND_PUSH_MAX = 14, LAND_PUSH_DECAY = 0.6, LAND_NOD = 14,
     TOUCH_DVZ = 250,                                 -- cm/s upward change in one tick = hit the ground
     NOD_KICK_RJ = 18, NOD_KICK_AB = 8, NOD_HOLD_RJ = 0.8, NOD_HZ = 2.0, NOD_DAMP = 0.55, NOD_AB_PEAK = 1.2,
     WARP_AMOUNT = 0.12, WARP_RISE = 0.06, WARP_FALL = 0.45, WARP_LEN = 2.0,
     RJ_LOW = 0.5, RJ_LOW_HZ = 2.6, AB_LOW = 0.8, AB_HEAVY = 0.6,
+    AB_RUMBLE = 0.45, AB_RUMBLE_HZ = 8, AB_RUMBLE_IN = 0.12, AB_RUMBLE_OUT = 0.4,   -- cm, Hz, s: afterburner rumble
     AB_MIN_HOLD = 0.12, AB_REPEAT = 1.0, AB_FRESH = 4.0, AB_LUNGE_RISE = 0.2, AB_LUNGE_FALL = 0.6,
     LIFT_RISE = 0.35, LIFT_DROP = 0.08, HS_RAMP = 0.12,
     FOLLOW_BONE = 'spine_05', FOLLOW_AFTER = 1.0,
@@ -192,7 +220,274 @@ local function hitstopTick(dt)
     else hitstopEnd() end
 end
 
+-------------------------------------------------------------------------------- shake along with the vehicle (test)
+-- The shake moves only your view, inside a vehicle that stays still: in VR that looks as if the
+-- vehicle trembles around you (the cockpit is close, so it seems to move; the world far away hardly
+-- does). Measured in the game (2026-10-16): the body, the pilot and the seat move exactly with the
+-- vehicle, nothing of it trembles by itself. With "Shake along with the vehicle" the trembling (engine,
+-- road, boost hum, heat shudder, slipstream, the landing hit) moves the vehicle body too, by the
+-- same amount: the part that carries the seat and the body (in this game CustomisationRoot is the
+-- vehicle's root, the physics body: the child of it the seat hangs under is moved). The view follows the
+-- seat, so the cockpit stays put in front of you and the world outside shakes: you and the vehicle
+-- shake together. The slower movements (corner push, bobbing on the road and over hills, the landing
+-- press) go to the body too (their own amount); the boost lunges stay in the view. Landings: the body (with you) slams down, dips its nose, rolls a little to one side,
+-- bounces back on its springs and shudders for a moment (its own amount, up to 500 %). The body's
+-- trembling stops while airborne. A cm of trembling is hardly seen against the world far away, so the body also
+-- tilts with it (alongTilt degrees per cm: up / down -> pitch, sideways -> roll) and the view turns
+-- by the same angles: the world visibly shakes, the cockpit stays put. The lunges, sways and the
+-- landing press stay in the view (your body moving in the seat). The body is moved right before the
+-- frame is drawn and the seat is read (after the game's own tick, so nothing overwrites it and the
+-- view and the body move in the same frame).
+V.tunable('feel', 'alongTilt', 0.5, 0, 2, 'Ride shake: tilt',
+    'With "Ride shake": how much the world also tilts with the trembling it gets. 0 = no tilting.')
+-- the ride shake amounts (%): values per vehicle like the fine tuning (changed while driving a
+-- vehicle = saved for it); shared values until the per-type defaults are set
+V.tunable('feel', 'shakeAlong', 100, 0, 100, 'Ride shake: trembling (world share)',
+    'Share of the engine, road, afterburner and ramjet trembling that shakes the world (you move with the vehicle) instead of the cockpit. 0 = only the cockpit trembles, 100 = only the world.').main = true
+V.tunable('feel', 'shakeAlongSmooth', 0, 0, 300, 'Ride shake: smooth (driving)',
+    'Softens the trembling and the sways while you just drive. The afterburner, the ramjet and landings stay sharp. 0 = off, 300 = most.').main = true
+V.tunable('feel', 'shakeAlongSmooth2', 0, 0, 300, 'Ride shake: smooth (boosts and hits)',
+    'Softens the afterburner and ramjet rumble, the push in corners and the landing slam. 0 = off, 300 = most.').main = true
+V.tunable('feel', 'shakeAlongAir', 50, 0, 100, 'Ride shake: trembling in the air',
+    'How much of the world\'s trembling stays while you are in the air. 0 = a calm flight, 100 = the same as on the ground.').main = true
+V.tunable('feel', 'shakeAlongMove', 100, 0, 100, 'Ride shake: sways (world share)',
+    'Share of the bobbing on the road and over hills, the push in corners and the landing press that goes to the world instead of the cockpit. 0 = only the cockpit, 100 = only the world. Afterburner and ramjet lunges always stay with the cockpit.').main = true
+V.tunable('feel', 'shakeAlongLand', 100, 0, 300, 'Ride shake: landing slam',
+    'How hard you slam down with the vehicle when you land: bigger after higher drops, longer flights and at speed. 0 = off, 100 = default.').main = true
+-- (older versions kept them in the settings for every vehicle: those become the shared values, once)
+if not V.cfg.shakeAlongPerVehicle then
+    for _, key in ipairs({ 'shakeAlong', 'shakeAlongSmooth', 'shakeAlongSmooth2', 'shakeAlongAir', 'shakeAlongMove' }) do
+        local old, item = tonumber(V.cfg[key]), V.TUNE_INDEX[key]
+        if old and item and math.abs(old - item.base) > 0.001 then V.cfg.detail[key] = old end
+    end
+    V.cfg.shakeAlongPerVehicle = true
+    V.save()
+end
+-- (the landing slam amount changed meaning on 2026-10-17: 100 = the new design, the old one needed
+-- 500 to be felt at all. Values saved with the old meaning are dropped, once.)
+if not V.cfg.landSlamV2 then
+    V.cfg.detail.shakeAlongLand = nil
+    for m in pairs(V.veh.detail) do V.clearOwnVal('detail', m, 'shakeAlongLand') end
+    V.cfg.landSlamV2 = true
+    V.save(); V.saveVeh()
+end
+local car = { pawn = nil, comp = nil, parent = nil, base = nil, last = nil, failed = nil, moved = false, hit = nil, loc = nil, rot = nil, free = false }
+local POD_MOVE, POD_TILT = 6, 4            -- podracer pod mesh: at most this far (cm) / this much tilt (degrees)
+local carT = { 0, 0, 0 }                   -- the part of the shake the vehicle body takes (vehicle axes, cm)
+-- landing slam of the body: down (cm), nose (deg), roll (deg) on springs that overshoot (a bounce), and
+-- a short hard shudder right after the touchdown. How hard: the falling speed the ground stops,
+-- f = cm/s / REF (up to MAX_F) - a high drop slams, a small hop or a landing along a slope barely -, the
+-- time in the air (a short flight over a small ledge only AIR_MIN of it, full from AIR_T1 s: the game
+-- lets even small ledges fall fast) and a little the driving speed. The drop grows faster than f
+-- (f ^ DROP_EXP), and the shape follows the size: small = a quick light tap (stiff spring, short
+-- shudder), big = deeper and slower (soft spring), a bigger bounce and a longer shudder. Logged falls
+-- (2026-10-17, Beluga): 470 .. 2800 cm/s, most 900 .. 1400, even after half a second in the air.
+local slam = { z = 0, zv = 0, p = 0, pv = 0, r = 0, rv = 0, zr = 0, pr = 0, rr = 0, shud = 0, ph = 0, hz = 3, shudT = 0.2 }
+-- boosting: the vehicle (with you) rumbles all the time the ramjet / afterburner burns (cm, at full
+-- "Trembling"; the afterburner 70 %)
+local SA_BOOST, SA_BOOST_HZ = 1.2, 10
+local SLAM = {
+    REF = 1000, MAX_F = 3.5, WIN = 0.2, PEAK_T = 0.6,   -- falling speed (cm/s) of strength 1; touchdown window (s); fall look-back (s)
+    DROP = 20, DROP_EXP = 1.3,                          -- cm down at strength 1 (100 %), growing as strength ^ DROP_EXP
+    DROP_KNEE = 15, DROP_MAX = 42,                      -- as is up to KNEE cm, then easing off toward MAX (at 100 %)
+    NOSE = 0.3, ROLL = 0.14,                            -- degrees of nose dip / roll per cm down
+    SPEED = 0.4,                                        -- the driving speed: x (0.8 .. 1.2) from standing to top speed
+    AIR_MIN = 0.15, AIR_T0 = 0.5, AIR_T1 = 2.0,         -- time in the air: x AIR_MIN up to AIR_T0 s, x 1 from AIR_T1 s (rising slowly first)
+    SIZE_SMALL = 8, SIZE_BIG = 35,                      -- cm down (at 100 %) of a small / big landing, for its shape
+    HZ_SMALL = 3.4, HZ_BIG = 2.0, PHZ = 1.23, DAMP = 0.28,   -- the springs: small / big landing (Hz), nose and roll x PHZ
+    SHUD = 0.9, SHUD_P = 0.5, SHUD_HZ = 24,             -- shudder: cm and degrees per unit, its speed
+    SHUD_PER = 0.1, SHUD_MAX = 6, SHUD_T_SMALL = 0.15, SHUD_T_BIG = 0.4,   -- units per cm down (eases off to MAX), how long
+    Z_KNEE = 40, Z_MAX = 70, P_KNEE = 10, P_MAX = 18, R_KNEE = 5, R_MAX = 8,   -- as is up to KNEE, then easing off to MAX
+    NOSE_KNEE = 12, NOSE_MAX = 20 }                     -- the body's whole nose (with the driving tilt)
+-- (a spring of this damping kicked with speed v0 goes down v0 / w * SLAM_PEAK at most)
+local SLAM_PEAK = (function(d) local q = math.sqrt(1 - d * d); return math.exp(-d / q * math.atan(q / d)) end)(SLAM.DAMP)
+local function softLim(x, lim) local q = x / lim; return x / math.sqrt(1 + q * q) end
+-- as it is up to knee, beyond that easing off toward max
+local function kneeLim(x, knee, max)
+    local a = math.abs(x)
+    if a <= knee then return x end
+    local r = knee + softLim(a - knee, max - knee)
+    return x < 0 and -r or r
+end
+-- the body's nose: as it is up to NOSE_KNEE degrees (all the driving), beyond that easing off toward
+-- NOSE_MAX (big landings), so a high drop still dips more than a medium one
+local function noseLim(x) return kneeLim(x, SLAM.NOSE_KNEE, SLAM.NOSE_MAX) end
+-- the springs and the shudder for a landing of d cm (at 100 %): stiff and short when small, soft and long when big
+local function slamSize(d)
+    local b = clamp01((d - SLAM.SIZE_SMALL) / (SLAM.SIZE_BIG - SLAM.SIZE_SMALL))
+    slam.hz = SLAM.HZ_SMALL + (SLAM.HZ_BIG - SLAM.HZ_SMALL) * b
+    slam.shudT = SLAM.SHUD_T_SMALL + (SLAM.SHUD_T_BIG - SLAM.SHUD_T_SMALL) * b
+end
+-- kicks the springs so the body goes about dDrop cm further down (nose and roll with it)
+local function slamKick(dDrop, sign)
+    local w, wp = TAU * slam.hz, TAU * slam.hz * SLAM.PHZ
+    slam.zv = slam.zv - dDrop * w / SLAM_PEAK
+    slam.pv = slam.pv - dDrop * SLAM.NOSE * wp / SLAM_PEAK
+    slam.rv = slam.rv + sign * dDrop * SLAM.ROLL * wp / SLAM_PEAK
+end
+-- the downward speed (cm/s) of the last frames, to know how fast the vehicle fell before it landed
+local FALL_N = 160
+local fallT, fallV, fallI = {}, {}, 0
+local function fallPush(t, v) fallI = fallI % FALL_N + 1; fallT[fallI], fallV[fallI] = t, v end
+local function fallPeak(t, span)
+    local m = 0
+    for i = 1, FALL_N do
+        local ti = fallT[i]
+        if ti and t - ti <= span and fallV[i] > m then m = fallV[i] end
+    end
+    return m
+end
+local function slamStep(dt)
+    local steps = math.max(1, math.ceil(dt / 0.004))
+    local h = dt / steps
+    local w, wp = TAU * slam.hz, TAU * slam.hz * SLAM.PHZ
+    for _ = 1, steps do
+        slam.zv = slam.zv + (-w * w * slam.zr - 2 * SLAM.DAMP * w * slam.zv) * h; slam.zr = slam.zr + slam.zv * h
+        slam.pv = slam.pv + (-wp * wp * slam.pr - 2 * SLAM.DAMP * wp * slam.pv) * h; slam.pr = slam.pr + slam.pv * h
+        slam.rv = slam.rv + (-wp * wp * slam.rr - 2 * SLAM.DAMP * wp * slam.rv) * h; slam.rr = slam.rr + slam.rv * h
+    end
+    slam.z = kneeLim(slam.zr, SLAM.Z_KNEE, SLAM.Z_MAX)
+    slam.p = kneeLim(slam.pr, SLAM.P_KNEE, SLAM.P_MAX)
+    slam.r = kneeLim(slam.rr, SLAM.R_KNEE, SLAM.R_MAX)
+    slam.shud = slam.shud * math.exp(-dt / slam.shudT)
+    slam.ph = slam.ph + dt * SLAM.SHUD_HZ
+end
+local function slamReset()
+    slam.z, slam.zv, slam.p, slam.pv, slam.r, slam.rv, slam.shud = 0, 0, 0, 0, 0, 0, 0
+    slam.zr, slam.pr, slam.rr = 0, 0, 0
+    st.slamWin = nil
+end
+local carTilt = { 0, 0 }                   -- and its tilt (pitch, roll degrees), the view turns the same
+-- the part to move: up from the seat mesh, the last parent before the vehicle's root (the root is the
+-- physics body); CustomisationRoot itself if it is not the root
+local function carFind(p)
+    local seat = nil
+    for _, c in ipairs(V.components(p, 'Engine.StaticMeshComponent')) do
+        local a = c.StaticMesh
+        if a and S.anchor and a:get_full_name() == S.anchor.model then seat = c; break end
+    end
+    if not seat then return nil, 'no seat mesh' end
+    local root = p.RootComponent
+    local rootId = root and root:get_address()
+    local chain, c, below = { seat:get_fname():to_string() }, seat, nil
+    for _ = 1, 16 do
+        local up = c:GetAttachParent()
+        if not up then break end
+        local n = up:get_fname():to_string()
+        chain[#chain + 1] = n
+        if up:get_address() == rootId then
+            if c == seat then return nil, 'the seat mesh hangs right under the root ('..table.concat(chain, ' < ')..')' end
+            local okP, sim = pcall(function() return c:IsSimulatingPhysics() end)
+            if okP and sim then return nil, 'the part under the root simulates physics' end
+            return c, c:get_fname():to_string()..' ('..table.concat(chain, ' < ')..')'
+        end
+        if n == 'CustomisationRoot' then return up, n..' ('..table.concat(chain, ' < ')..')' end
+        below, c = c, up
+    end
+    -- No root above: the topmost part hangs on nothing - a podracer's pod container on its cables. The
+    -- game works the pod's next place out from where the container is: moving the container added up,
+    -- pod and engines flew apart and the game wrecked the vehicle (tried 2026-10-16). So the container
+    -- stays as it is and the part right under it (the pod's own mesh, carrying the seat) is moved
+    -- against it instead - by a little only (car.free: limited, see carMove).
+    if not below or below == seat then return nil, 'the seat mesh hangs right under the free pod container ('..table.concat(chain, ' < ')..')' end
+    local okP, sim = pcall(function() return below:IsSimulatingPhysics() end)
+    if okP and sim then return nil, 'the pod mesh simulates physics' end
+    return below, below:get_fname():to_string()..' in the free pod container ('..table.concat(chain, ' < ')..')', true
+end
+local function carSet(x, y, z, pitch, yaw, roll)
+    car.loc = car.loc or StructObject.new(api:find_uobject('ScriptStruct /Script/CoreUObject.Vector'))
+    car.rot = car.rot or StructObject.new(api:find_uobject('ScriptStruct /Script/CoreUObject.Rotator'))
+    car.hit = car.hit or StructObject.new(api:find_uobject('ScriptStruct /Script/Engine.HitResult'))
+    car.loc.X, car.loc.Y, car.loc.Z = x, y, z
+    car.rot.Pitch, car.rot.Yaw, car.rot.Roll = pitch, yaw, roll
+    -- (no sweep, teleport: no physics from this)
+    car.comp:K2_SetRelativeLocationAndRotation(car.loc, car.rot, false, car.hit, true)
+    car.last = { x, y, z, pitch, yaw, roll }
+end
+local function carStop()
+    car.want = false
+    local b = car.base
+    -- (a free-standing part is placed by the game every frame: nothing to put back)
+    if car.moved and car.comp and b and car.parent then pcall(carSet, b[1], b[2], b[3], b[4], b[5], b[6]) end
+    car.moved, car.base = false, nil
+    carT[1], carT[2], carT[3], carTilt[1], carTilt[2] = 0, 0, 0, 0, 0
+    slamReset()
+end
+local function wrap180(a) return (a + 180) % 360 - 180 end
+-- quaternions { x, y, z, w }: product, inverse (unit), and the engine's rotator <-> quaternion
+local function qmul(a, b)
+    return { a[4] * b[1] + a[1] * b[4] + a[2] * b[3] - a[3] * b[2], a[4] * b[2] - a[1] * b[3] + a[2] * b[4] + a[3] * b[1],
+             a[4] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[4], a[4] * b[4] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3] }
+end
+local function qinv(a) return { -a[1], -a[2], -a[3], a[4] } end
+local function rotQ(pitch, yaw, roll)
+    local h = math.pi / 360
+    local sp, cp, sy, cy, sr, cr = math.sin(pitch * h), math.cos(pitch * h), math.sin(yaw * h), math.cos(yaw * h), math.sin(roll * h), math.cos(roll * h)
+    return { cr * sp * sy - sr * cp * cy, -cr * sp * cy - sr * cp * sy, cr * cp * sy - sr * sp * cy, cr * cp * cy + sr * sp * sy }
+end
+local function qRot(q)
+    local x, y, z, w = q[1], q[2], q[3], q[4]
+    return math.deg(math.asin(math.max(-1, math.min(1, 2 * (z * x - w * y))))),
+        math.deg(math.atan(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))),
+        math.deg(math.atan(-2 * (w * x + y * z), 1 - 2 * (x * x + y * y)))
+end
+-- how much of the trembling (0..1) and of the landing hit (0..3) the vehicle body takes now; finds
+-- the body once per vehicle
+local function carAmount(p)
+    local k = math.max(0, math.min(1, (V.rideVal('shakeAlong') or 0) / 100))
+    local kl = math.max(0, math.min(3, (V.rideVal('shakeAlongLand') or 0) / 100))
+    local km = math.max(0, math.min(1, (V.rideVal('shakeAlongMove') or 0) / 100))
+    local id = p and p:get_address()
+    if id ~= car.pawn then carStop(); car.pawn, car.comp, car.parent, car.failed = id, nil, nil, nil end
+    if not V.cfg.shakeAlongOn or (k <= 0 and kl <= 0 and km <= 0) or not p or car.failed or S.yielding() then return 0, 0, 0 end
+    if not car.comp then
+        local ok, c, why, free = pcall(carFind, p)
+        if not ok or not c then
+            car.failed = ok and why or tostring(c)
+            log('shake along with the vehicle not possible: '..car.failed)
+            return 0, 0, 0
+        end
+        car.comp, car.parent, car.free = c, c:GetAttachParent(), free == true
+        log('shake along with the vehicle: moves '..why)
+    end
+    return k, kl, km
+end
+-- put this tick's part on the body (its parent's axes: the offset is turned from the vehicle's; the
+-- tilt is turned on top of the resting rotation, in the parent's axes)
+local function carMove(q)
+    if not car.comp then return end
+    local l, r, last = car.comp.RelativeLocation, car.comp.RelativeRotation, car.last
+    -- the resting place: taken when it starts; if the game moved the body itself, its new place
+    local movedByGame = last and (math.abs(l.X - last[1]) + math.abs(l.Y - last[2]) + math.abs(l.Z - last[3]) > 0.05
+        or math.abs(wrap180(r.Pitch - last[4])) + math.abs(wrap180(r.Yaw - last[5])) + math.abs(wrap180(r.Roll - last[6])) > 0.05)
+    if not car.base or movedByGame then car.base = { l.X, l.Y, l.Z, r.Pitch, r.Yaw, r.Roll } end
+    local b = car.base
+    -- (the pod: a little only - its mesh may be what the game checks collisions with)
+    local lim, limT = car.free and POD_MOVE or 1e9, car.free and POD_TILT or 1e9
+    local wx, wy, wz = rotate(q, clamp(carT[1], lim), clamp(carT[2], lim), clamp(carT[3], lim))
+    local pq = car.parent and V.quat(car.parent:K2_GetComponentToWorld().Rotation)
+    local rx, ry, rz = wx, wy, wz
+    if pq then rx, ry, rz = unrotate(pq, wx, wy, wz) end
+    local pitch, yaw, roll = b[4], b[5], b[6]
+    if carTilt[1] ~= 0 or carTilt[2] ~= 0 then
+        -- the tilt turns about the vehicle's own axes (pitch: its right, roll: its forward), put on top of
+        -- the resting rotation and written in the parent's axes: rel' = P^-1 * (Q * T * Q^-1) * P * rel
+        local P = pq or { 0, 0, 0, 1 }
+        local turnW = qmul(qmul(q, rotQ(clamp(carTilt[1], limT), 0, clamp(carTilt[2], limT))), qinv(q))
+        pitch, yaw, roll = qRot(qmul(qmul(qmul(qinv(P), turnW), P), rotQ(b[4], b[5], b[6])))
+    end
+    carSet(b[1] + rx, b[2] + ry, b[3] + rz, pitch, yaw, roll)
+    car.moved = true
+end
+V.shakeAlongInfo = car                     -- (menu: why it is not possible)
+V.beforeSeat = function()
+    if not car.want then return end
+    local ok, err = pcall(carMove, car.q)
+    if not ok then car.failed, car.want = tostring(err), false; log('shake along with the vehicle turned off: '..car.failed); carStop() end
+end
+
 local function reset()
+    pcall(carStop)
     hitstopEnd()
     st.abL, st.abLunging = 0, false
     for i = 1, 3 do st.sp[i], st.sv[i], st.accLP[i] = 0, 0, 0 end
@@ -200,6 +495,8 @@ local function reset()
     st.jp, st.jv, st.lastVz, st.pushZ = 0, 0, nil, 0
     st.rp, st.rv, st.rotPitch = 0, 0, 0
     st.hp, st.hpv, st.hr, st.hrv, st.rotHeadP, st.rotHeadR = 0, 0, 0, 0, 0, 0
+    st.abEnv, st.launchUntil, st.saEnv = 0, nil, 0
+    st.liftT, st.air0T = nil, nil
     warpStop()
 end
 local function event(name)
@@ -378,9 +675,14 @@ local function update(dt)
     end
     st.prevEB = eb
 
-    -- race start launch (bigger with a better perfect start)
+    -- race start launch (bigger with a better perfect start). The start itself only arms it: it fires
+    -- when you really go - throttle down or already moving - within LAUNCH_WAIT s; standing at the
+    -- start without accelerating gives no lunge (2026-10-17)
     local ignPhase = tonumber(v.IgnitionPhase) or -1
-    if ignPhase == IGN_POST and st.prevIgn == IGN_PERFECT then
+    if ignPhase == IGN_POST and st.prevIgn == IGN_PERFECT then st.launchUntil = V.t + K.LAUNCH_WAIT end
+    if st.launchUntil and V.t > st.launchUntil then st.launchUntil = nil end
+    if st.launchUntil and (thr > 0.3 or mph > 15) then
+        st.launchUntil = nil
         local s0 = clamp01(v.PerfectStartStrength)
         kick(dir * (K.LAUNCH_KICK + (K.LAUNCH_KICK_PERFECT - K.LAUNCH_KICK) * s0) * cfg.launch * M, 0, 0)
         st.push, st.pushDecay = math.max(st.push, (K.LAUNCH_PUSH + (K.LAUNCH_PUSH_PERFECT - K.LAUNCH_PUSH) * s0) * cfg.launch), K.RAMJET_PUSH_DECAY
@@ -395,6 +697,16 @@ local function update(dt)
     -- landing: the vertical velocity suddenly stops falling while airborne (or LandingState -> 2);
     -- TimeInAir resets ~0.7 s before touchdown, so airPeak keeps the air time until the touchdown
     if air > st.airPeak then st.airPeak = air end
+    -- (the whole flight, take-off to touchdown, for the body's slam: TimeInAir is 0 again before the
+    -- touchdown, so the take-off time is kept; forgotten after 1.5 s back on the ground without a landing)
+    if air > 0 then
+        if not st.liftT then st.liftT = V.t - air end
+        st.air0T = nil
+    else
+        st.air0T = st.air0T or V.t
+        if st.liftT and V.t - st.air0T > 1.5 then st.liftT = nil end
+    end
+    fallPush(V.t, -vz)
     local ls = tonumber(v.LandingState) or 0
     local dvz = st.lastVz and (vz - st.lastVz) or 0
     st.lastVz = vz
@@ -408,6 +720,16 @@ local function update(dt)
         local a = math.min(airT, 1.5) / 1.5
         local L = cfg.landing
         st.jv = st.jv - K.JOLT_TAP * cfg.landHit * M * (0.6 + 0.8 * a)   -- the hit at contact, harder after longer jumps
+        if V.cfg.shakeAlongOn then
+            local kl = math.max(0, math.min(3, (V.rideVal('shakeAlongLand') or 0) / 100)) * V.feelPct('landing') / 100
+            local flight = st.liftT and V.t - st.liftT or airT
+            if flight > 10 then flight = airT end
+            local ax = clamp01((flight - SLAM.AIR_T0) / (SLAM.AIR_T1 - SLAM.AIR_T0))
+            local airK = SLAM.AIR_MIN + (1 - SLAM.AIR_MIN) * ax * ax   -- (1 s about x 0.24, 1.5 s about x 0.53)
+            st.slamWin = { endT = V.t + SLAM.WIN, peak = fallPeak(V.t, SLAM.PEAK_T), k = kl,
+                size = (1 - SLAM.SPEED / 2 + SLAM.SPEED * spd) * airK, flight = flight, airK = airK,
+                shudK = 0.5 + spd, drop = 0, lost = 0, sign = math.random() < 0.5 and -1 or 1 }
+        end
         kick(K.LAND_KICK * (0.5 + 0.5 * a) * L * M * cfg.landLean, 0, -K.LAND_KICK * (0.5 + 0.5 * a) * L * M)
         st.pushZ, st.pushZDecay = math.max(st.pushZ, (K.LAND_PUSH_MIN + (K.LAND_PUSH_MAX - K.LAND_PUSH_MIN) * a) * L), K.LAND_PUSH_DECAY
         st.burst, st.burstDecay = math.max(st.burst, (0.4 + 0.3 * a) * L), 0.6
@@ -419,7 +741,38 @@ local function update(dt)
             st.hrv = st.hrv + (math.random() < 0.5 and -1 or 1) * cfg.headHitRoll * k
         end
         event(string.format('landing %.1fs', airT))
-        st.airPeak = 0
+        st.airPeak, st.liftT = 0, nil
+    end
+    -- the body's slam over the touchdown: the falling speed stopped so far (the fastest it fell just
+    -- before, less what it still falls) gives the strength; it grows while the ground is still stopping
+    -- the vehicle (WIN s), each frame kicking only what was added
+    local sw = st.slamWin
+    if sw then
+        local lost = math.max(0, sw.peak - math.max(0, -vz))
+        if lost > sw.lost then
+            sw.lost = lost
+            local f = math.min(lost / SLAM.REF, SLAM.MAX_F)
+            local d = SLAM.DROP * f ^ SLAM.DROP_EXP * sw.size     -- (cm at 100 %)
+            sw.raw = math.max(sw.raw or 0, d)
+            -- (the biggest landings ease off toward DROP_MAX: the whole slam - drop, bounce, nose, roll,
+            -- shudder - stays in proportion; 2026-10-17: up to ~68 cm down and ~45 cm back up was too much)
+            if d > SLAM.DROP_KNEE then
+                local room = SLAM.DROP_MAX - SLAM.DROP_KNEE
+                d = SLAM.DROP_KNEE + room * (1 - math.exp(-(d - SLAM.DROP_KNEE) / room))
+            end
+            local drop = d * sw.k
+            if drop > sw.drop then
+                slamSize(d)
+                slamKick(drop - sw.drop, sw.sign)
+                sw.drop = drop
+                slam.shud = math.max(slam.shud, softLim(drop * SLAM.SHUD_PER * sw.shudK, SLAM.SHUD_MAX))
+            end
+        end
+        if V.t >= sw.endT then
+            log(string.format('landing slam: fell %.0f cm/s, the ground stopped %.0f, %.1f s in the air (x %.2f), %.1f cm down (%.1f before the limit), spring %.1f Hz',
+                sw.peak, sw.lost, sw.flight, sw.airK, sw.drop, (sw.raw or 0) * sw.k, slam.hz))
+            st.slamWin = nil
+        end
     end
     -- the view rises a little while airborne and drops with the touchdown
     local liftOn = (air > 0.2 or (airborne and st.airPeak > 0.2)) and cfg.airLift or 0
@@ -524,6 +877,9 @@ local function update(dt)
     end
     if burningNow then hold = hold + K.AFTERBURNER_HOLD * cfg.afterburner end
     local drift = v.Drifting and K.DRIFT_RUMBLE * (0.5 + 0.5 * clamp01(v.DriftScale)) * cfg.drift or 0
+    -- (shake along: on the ground; fades out fast after take-off, back in at the touchdown)
+    local inAir = air > 0.05 or ls == 1 or ground < 0.5
+    st.groundW = (st.groundW or 1) + ((inAir and 0 or 1) - (st.groundW or 1)) * (1 - math.exp(-dt / (inAir and 0.05 or 0.12)))
     local amp = (road + idle + hold + st.burst + drift) * M
 
     -- heavy layer: ramjet heat / afterburner shudder, revving while standing, slipstream buffet
@@ -543,6 +899,15 @@ local function update(dt)
     local hx = noise(st.phase2, 7) * (0.4 * heavy + 0.2 * buffet)
     local hy = noise(st.phase2, 8) * (0.8 * heavy + 1.0 * buffet)
     local hz = noise(st.phase2, 9) * (1.0 * heavy + 0.3 * buffet)
+    -- afterburner rumble: while it burns, a heavier and slower shudder than the road (mostly up and
+    -- down, throbbing a little), in quickly when it fires, out after; part of the trembling
+    local abT = burningNow and 1 or 0
+    st.abEnv = (st.abEnv or 0) + (abT - (st.abEnv or 0)) * (1 - math.exp(-dt / (abT > (st.abEnv or 0) and K.AB_RUMBLE_IN or K.AB_RUMBLE_OUT)))
+    st.abPhase = (st.abPhase or 0) + dt * K.AB_RUMBLE_HZ
+    local abA = K.AB_RUMBLE * cfg.abRumble * st.abEnv * M * (0.75 + 0.25 * math.sin(TAU * st.abPhase * 0.3))
+    hx = hx + noise(st.abPhase, 31) * 0.3 * abA
+    hy = hy + noise(st.abPhase, 32) * 0.5 * abA
+    hz = hz + noise(st.abPhase, 33) * abA
     local freq = 9 + 9 * spd + 8 * rev * standing + 6 * clamp01(st.burst / 0.5)     -- Hz, below 30
     st.phase = st.phase + dt * freq
     local nx = noise(st.phase, 1) * 0.35
@@ -571,7 +936,120 @@ local function update(dt)
     lz = lz + st.jp                                     -- the landing hit is not limited by the floor
     local g = st.gate
     lx, ly, lz = lx * g, ly * g, lz * g
-    V.feelDown, V.feelFwd, V.air = -lz, lx, air
+    -- (test) the trembling and the landing hit: the vehicle body takes this part and carries you
+    -- along (the view follows the seat), the view keeps the rest
+    local k, kl, km = carAmount(p)
+    if k > 0 or kl > 0 or km > 0 then
+        -- the trembling: the view gives up the body's part; in the air the body does only its "in the
+        -- air" share of it (the rest of that part is simply gone, the rest of the shake is as before)
+        local rx, ry, rz = (nx * amp + hx + lowX * low) * g, (ny * amp + hy) * g, (nz * amp + hz + lowZ * low) * g
+        local tx, ty, tz = rx * k, ry * k, rz * k
+        -- the slower movements (spring: corner push, bobbing on the road and over hills, the landing
+        -- press, impacts): what is left of the view's offset without the trembling, the pilot follow,
+        -- the lift in the air and the old landing hit; the body takes km of it, the view gives that up.
+        -- Not forward / back: the boost and start lunges stay in the view (the dashboard comes at you -
+        -- carried by the body they got lost in the shaking world, 2026-10-17)
+        local mx = 0
+        local my = (ly - ry - f[2] * g) * km
+        local mz = (lz - rz - (f[3] + st.liftZ + st.jp) * g) * km
+        -- (in the air the body keeps shakeAlongAir of its trembling: none = a calm flight, all = speed)
+        local airK = math.max(0, math.min(1, (tonumber(V.val('shakeAlongAir')) or 0) / 100))
+        local gw = (st.groundW or 1) + (1 - (st.groundW or 1)) * airK
+        slamStep(dt)
+        local sh = slam.shud * g
+        local shZ = noise(slam.ph, 21) * SLAM.SHUD * sh
+        -- (smooth, above 0: the body does the driving part of its trembling -
+        -- engine idle / revs, road, drift - slower and softer; the boost hold, the bursts of boosts and
+        -- landings and the heavy / low layers stay as sharp as before. The view gives up the same as
+        -- before. At 0 these are the very values from before.)
+        local bx, by, bz = tx, ty, tz
+        local sm = math.max(0, math.min(3, (tonumber(V.val('shakeAlongSmooth')) or 0) / 100))   -- (up to 300 %)
+        local drive = (road + idle + drift) * M
+        local drvX, drvY, drvZ = nx * drive * g * k, ny * drive * g * k, nz * drive * g * k   -- (the driving part of bx..)
+        if sm > 0 then
+            local boostPart = amp - drive
+            -- (up to 100 %: slower down to a quarter, softer down to 60 %; beyond it on to about 4 % /
+            -- 30 % at 300 %)
+            local slow = sm <= 1 and (1 - 0.75 * sm) or 0.25 * 0.4 ^ (sm - 1)
+            local weak = sm <= 1 and (1 - 0.4 * sm) or 0.6 * 0.7 ^ (sm - 1)
+            st.phaseB = (st.phaseB or 0) + dt * freq * slow
+            local soft = drive * weak
+            drvX, drvY, drvZ = noise(st.phaseB, 41) * 0.35 * soft * g * k, noise(st.phaseB, 42) * 0.6 * soft * g * k, noise(st.phaseB, 43) * soft * g * k
+            bx = (noise(st.phaseB, 41) * 0.35 * soft + nx * boostPart + hx + lowX * low) * g * k
+            by = (noise(st.phaseB, 42) * 0.6 * soft + ny * boostPart + hy) * g * k
+            bz = (noise(st.phaseB, 43) * soft + nz * boostPart + hz + lowZ * low) * g * k
+        end
+        -- (boosting: the body rumbles steadily the whole time the ramjet / afterburner burns - in the
+        -- middle of a ramjet and through a long afterburner the shaking along was too weak, the speed
+        -- felt gone (2026-10-17). New motion of the body only, sharp; half of it even at low "Trembling")
+        local bt = rjLit and 1 or (burningNow and 0.7 or 0)
+        st.saEnv = (st.saEnv or 0) + (bt - (st.saEnv or 0)) * (1 - math.exp(-dt / (bt > (st.saEnv or 0) and 0.12 or 0.4)))
+        if st.saEnv > 0.001 then
+            st.saPh = (st.saPh or 0) + dt * SA_BOOST_HZ
+            local a = SA_BOOST * st.saEnv * (0.5 + 0.5 * k) * g
+            bx = bx + noise(st.saPh, 51) * 0.3 * a
+            by = by + noise(st.saPh, 52) * 0.5 * a
+            bz = bz + noise(st.saPh, 53) * a
+        end
+        -- (smooth also softens the bobbing up and down (road, hills, the landing press) the body does:
+        -- a low-pass from about 8 Hz (a little smooth) to 1.5 Hz (full); the view gives up the same as
+        -- before. At 0 the body takes mz itself, as before.)
+        local mzB = mz
+        if sm > 0 then
+            local fc = math.max(0.4, 8 * (1.5 / 8) ^ sm)      -- (1.5 Hz at 100 %, 0.4 Hz from about 190 %)
+            st.mzS = st.mzS or mz
+            st.mzS = st.mzS + (mz - st.mzS) * (1 - math.exp(-dt * TAU * fc))
+            mzB = st.mzS
+        else
+            st.mzS = nil
+        end
+        carT[1], carT[2] = bx * gw + mx, by * gw + my
+        carT[3] = bz * gw + mzB + (slam.z + shZ) * g
+        local tilt = V.val('alongTilt')
+        local rawP = (bz * gw + mzB) * tilt + (slam.p + noise(slam.ph, 22) * SLAM.SHUD_P * sh) * g
+        local rawR = (by * gw + my) * tilt + slam.r * g
+        carTilt[1], carTilt[2] = noseLim(rawP), clamp(rawR, 10)
+        -- (second smooth, above 0: everything the body does that the first smooth leaves alone - boost /
+        -- ramjet rumble and bursts, overheating, slipstream, the steady boost rumble, the corner push,
+        -- the landing slam - goes through a low-pass, from about 5 Hz at 100 % to 1 Hz at 300 %, a
+        -- little louder so it is still felt. The driving trembling and the bobbing stay as the first
+        -- smooth makes them; the view gives up the same as before. At 0 nothing here runs.)
+        local sm2 = math.max(0, math.min(3, (tonumber(V.val('shakeAlongSmooth2')) or 0) / 100))
+        if sm2 > 0 then
+            local dX, dY, dZ = drvX * gw + mx, drvY * gw, drvZ * gw + mzB
+            local dP, dR = (drvZ * gw + mzB) * tilt, drvY * gw * tilt
+            local rest = { carT[1] - dX, carT[2] - dY, carT[3] - dZ, rawP - dP, rawR - dR }
+            local a = 1 - math.exp(-dt * TAU * 12 * (1 / 12) ^ (sm2 / 3))
+            local gain = 1 + 0.3 * sm2
+            if not st.r2 then st.r2 = { rest[1], rest[2], rest[3], rest[4], rest[5] } end
+            for i = 1, 5 do st.r2[i] = st.r2[i] + (rest[i] - st.r2[i]) * a end
+            carT[1], carT[2], carT[3] = dX + st.r2[1] * gain, dY + st.r2[2] * gain, dZ + st.r2[3] * gain
+            carTilt[1], carTilt[2] = noseLim(dP + st.r2[4] * gain), clamp(dR + st.r2[5] * gain, 10)
+        else
+            st.r2 = nil
+        end
+        if car.free then
+            -- (the pod mesh moves only a little: the view gives up just what it really does, the old
+            -- landing hit stays in the view)
+            local m = POD_MOVE
+            -- (what the view gives up: the pod's share as it is without smoothing - with smooth the pod
+            -- mesh does it softer, the view still gives up the sharp one; at 0 both are the same)
+            local vx, vy, vz = carT[1], carT[2], carT[3]
+            if bx ~= tx or by ~= ty or bz ~= tz or mzB ~= mz or sm2 > 0 then
+                vx, vy, vz = tx * gw + mx, ty * gw + my, tz * gw + mz + (slam.z + shZ) * g
+            end
+            carT[1], carT[2], carT[3] = clamp(carT[1], m), clamp(carT[2], m), clamp(carT[3], m)
+            lx, ly, lz = lx - clamp(vx, m), ly - clamp(vy, m), lz - clamp(vz, m)
+        else
+            -- (the old landing hit moved only the view: with the body slamming, the view gives it up)
+            lx, ly, lz = lx - tx - mx, ly - ty - my, lz - tz - mz - st.jp * g * math.min(kl, 1)
+        end
+        car.q, car.want = q, true                      -- (moved right before the frame is drawn)
+    else
+        car.want = false
+        if car.moved then carStop() end
+    end
+    V.feelDown, V.feelFwd, V.air = -lz, lx, air       -- (the eye against the cockpit)
     po[1], po[2], po[3] = rotate(q, lx, ly, lz)
 end
 
@@ -581,6 +1059,8 @@ V.hooks.feel = function(view, position, rotation)
     if st.rotPitch ~= 0 then rotation.x = rotation.x + st.rotPitch end
     if st.rotHeadP ~= 0 then rotation.x = rotation.x + st.rotHeadP end
     if st.rotHeadR ~= 0 then rotation.z = rotation.z + st.rotHeadR end
+    -- (shake along with the vehicle: the view turns with the body)
+    if car.moved then rotation.x, rotation.z = rotation.x + carTilt[1], rotation.z + carTilt[2] end
 end
 V.onTick('feel', function(dt)
     local ok, err = pcall(update, dt)
@@ -593,4 +1073,4 @@ V.onTick('feel', function(dt)
     local okH, errH = pcall(hitstopTick, math.min(dt, 0.1))
     if not okH then log('hit-stop error: '..tostring(errH)); pcall(hitstopEnd) end
 end)
-V.onReset(function() warpStop(); hitstopEnd() end)
+V.onReset(function() warpStop(); hitstopEnd(); pcall(carStop) end)

@@ -1,4 +1,4 @@
-# STAR WARS Galactic Racer — VR Cockpit for UEVR (v2.0.1)
+# STAR WARS Galactic Racer — VR Cockpit for UEVR (v2.1.0)
 
 A UEVR profile and a single Lua script for **STAR WARS Galactic Racer**: you sit in the pilot
 seat of every vehicle, and the cockpit finally moves — engine and road rumble, boost lunges,
@@ -21,8 +21,8 @@ in front of your face as big slabs in VR. It removes them.
 
 This is built on the UEVR profile and the VR cockpit script made by **Nero**, **madscy** and
 **elliotttate** — each building on the others' work — and it runs on **joeyhodge**'s UEVR
-backend DLL for this game. v2.0.0 (the new effects and features, and putting it all into one
-script) is by **ody**.
+backend DLL for this game. v2.0.0 and later (the new effects and features, and putting it all
+into one script) are by **ody**.
 
 Huge thanks to joeyhodge, elliotttate, madscy and Nero. Thanks also to
 [Random-kaizoku/PracticeMode-SWGR](https://github.com/Random-kaizoku/PracticeMode-SWGR) for the
@@ -31,6 +31,7 @@ Nanum Gothic by Naver (SIL Open Font License 1.1).
 
 ## Contents
 
+- [What's new in v2.1.0](#whats-new-in-v210)
 - [What's new in v2.0.0](#whats-new-in-v200)
 - [Install](#install)
 - [Pak mod](#pak-mod)
@@ -44,6 +45,28 @@ Nanum Gothic by Naver (SIL Open Font License 1.1).
 - [Building from source](#building-from-source)
 
 ---
+
+## What's new in v2.1.0
+
+- **Ride shake** *(off by default, for players who don't get motion sick)* — the cockpit itself
+  shakes with the vehicle and the VR world shakes along, for much more sense of speed. Its own
+  amounts, saved per vehicle, and a **landing slam** that grows with how fast you fell and how
+  long you flew.
+- **Afterburner rumble** — a boost now feels different from just driving fast.
+- **Shake masters per vehicle type** — scale all the shake of bikes, landspeeders, skimmers or
+  podracers at once.
+- **Brightness per map** — for maps that look too bright or washed out in VR, saved for that map
+  only.
+- **Takedowns and the finish line camera** — the cockpit steps aside for the game's takedown and
+  finish shots, then puts you back.
+- **Look back** — the game's own look back works in the cockpit view, and a new hotkey (right
+  stick up) turns you round in the cockpit seat while you hold it.
+- **Change Camera no longer nudges the HUD** in the cockpit (follows the game's control scheme).
+- A tidier menu: a reset arrow on every value, no more cut-off labels, colours, numbered follow
+  modes, real vehicle and character names.
+
+Needs joeyhodge's latest backend (see [Requirements](#requirements)). Details:
+[CHANGELOG.md](CHANGELOG.md).
 
 ## What's new in v2.0.0
 
@@ -90,17 +113,19 @@ Full list: [CHANGELOG.md](CHANGELOG.md).
 ### Requirements
 
 - STAR WARS Galactic Racer (PC).
-- UEVR with **joeyhodge's Galactic Racer backend** (`100726swgrp2`) — the same UEVR you used
-  for the v1.2.0 cockpit. UEVR and the game are not included here.
-  https://github.com/joeyhodge/UEVR/releases
+- UEVR with **joeyhodge's latest backend**:
+  [`101726-gow-e-day-poc-p1`](https://github.com/joeyhodge/UEVR/releases/tag/101726-gow-e-day-poc-p1)
+  (all of joeyhodge's builds: [joeyhodge/UEVR releases](https://github.com/joeyhodge/UEVR/releases)).
+  Replace `UEVRBackend.dll` in your UEVR folder with the one from that release. UEVR and the game
+  are not included here.
 
 ### 1. The profile (recommended)
 
 Each language has its own release with a file named **`SWGR-Win64-Shipping.zip`** — the name
 UEVR needs, so there is nothing to rename:
 
-- English menu: [**v2.0.1**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.1)
-- Korean menu: [**v2.0.1-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.0.1-ko)
+- English menu: [**v2.1.0**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.0)
+- Korean menu: [**v2.1.0-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.0-ko)
 
 1. Close the game, **back up** your current profile folder
    `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` (copy it somewhere else) and then **delete it**.
@@ -126,8 +151,13 @@ For Nero's stereo-mismatch fixes, see [Known issues and notes](#known-issues-and
 
 ### 3. Pak mod (optional)
 
-**`SWGR-NoBlackBars-pak-v2.0.1.zip`** (in both releases) removes the black bars and panels that
-look bad in VR. See [Pak mod](#pak-mod) right below.
+**`SWGR-NoBlackBars-pak-v2.1.0.zip`** (in both releases) removes the black bars and panels that
+look bad in VR. See [Pak mod](#pak-mod) right below. It is the same as in v2.0.x.
+
+### Updating from v2.0.x
+
+Replace `scripts/swgr_vr_cockpit.lua` in your profile with the one from the release of your
+language. The other profile files did not change, and your settings in `data` stay.
 
 ### Updating from v1.2.0
 
@@ -157,7 +187,7 @@ matter.
 
 - It is separate from the script and the profile: use it with them, without them, or not at all.
   The cockpit works fine without it.
-- Install: extract `SWGR-NoBlackBars-pak-v2.0.1.zip` into the game folder so
+- Install: extract `SWGR-NoBlackBars-pak-v2.1.0.zip` into the game folder so
   `zzz_SWGR_NoBlackBars_P.pak`, `.ucas` and `.utoc` end up in
   `STAR WARS Galactic Racer\Griffin\Content\Paks\~mods\`. The game's own pak files are not touched.
 - Remove: delete those three files.
@@ -174,14 +204,18 @@ matter.
 | **F4** | Next game camera (switches to the game cameras first). |
 | **F5** | Add-on effects on / off — compare with the original cockpit. |
 | *(none)* | Recenter head at the seat — assign a key if you want one. |
+| **Right stick up** (controller, hold) | Look back from the cockpit seat while held. |
 
 Change them in **Hotkeys**: click a keyboard button, then press the key you want (Esc
 cancels; Insert is UEVR's menu key and can't be used). Each action can also have a controller
-combo: hold **Back (View)** and press A / B / X / Y / D-pad / RB. While a key is being set no
-action fires, and a key already used by another action moves over.
+combo: hold **Back (View)** and press A / B / X / Y / D-pad / RB. The look-back action is held, so
+it can also be a single button or a right-stick direction. While a key is being set no action
+fires, and a key already used by another action moves over.
 
-The game's own Change Camera control still cycles the game cameras while you are in game-camera
-mode.
+While you race in the cockpit, the game's **Change Camera** button is not passed to the game (it
+did nothing there but nudge the HUD). Which button that is follows the game's control scheme:
+RB with Default, right stick click with Alternative. In the game cameras and in menus it works
+as usual.
 
 ---
 
@@ -193,17 +227,21 @@ explanation. From top to bottom:
 | Section | What's in it |
 | --- | --- |
 | *(top)* | **Add-on effects on**, View (VR cockpit / game cameras), hotkeys, **Recenter head at the seat**, the vehicle and character you are driving. |
-| **View and eye position** | Eye position (sideways / forward / up), Follow the vehicle (camera lock), **Banking %**, Pilot visibility, race intro flyover, outside view when crashing, **Follow the pilot on jumps** (up / forward), **Cut what is right at the eye** (cut distance). |
-| **Cockpit shake** | On / off, five amounts in % (Engine, Road, Corners / drifts, Boost punch, Landings and hits), **Landing hits your head**. |
+| **View and eye position** | Eye position (sideways / forward / up), Follow the vehicle (follow modes 1–5), **Banking %** with the live lean, Pilot visibility, **Follow the pilot on jumps** (up / forward), **Cut what is right at the eye** (cut distance), and the group **Game scenes and cameras**: race intro flyover, outside view when crashing, takedowns, finish line camera, **Look back**. |
+| **Cockpit shake** | On / off, five amounts in % (Engine, Road, Corners / drifts, Boost punch, Landings and hits), the **masters per vehicle type**, **Landing hits your head**, and **Ride shake** (in red: its six amounts and its own masters). |
 | **Boost effects** | Screen colours and flash %, hit-stop, warp pulse. |
+| **Brightness per map** | Seven picture values for the map you are on (in yellow). |
 | **Race start** | Engine start shot then into the cockpit, car body engine hum %. |
 | **Fine tuning (advanced)** | Every single value, grouped by topic: Engine · Road and corners · Boost lunge and nose lift · Boost screen, hit-stop, warp · **Landings and hits** · View (banking) · All shaking (head spring) · Race start. |
 | **Saved vehicles** | Every vehicle with values, editable without driving it. |
-| **Hotkeys** | Keyboard keys and controller combos. |
+| **Saved maps** | Every map with picture values, editable from anywhere. |
+| **Hotkeys** | Keyboard keys and controller buttons, one block per action. |
 | **Menu screen positions** | Fix menus where the VR view ends up in a strange place. |
 | **Reset all settings** | Shared settings back to the defaults (press twice). Saved vehicles stay. |
 
-Percent amounts: **100 = recommended, 0 = off, 200 = double.**
+Percent amounts: **100 = recommended, 0 = off, 200 = double.** The small arrow in front of a
+value brings back its default. Light blue text is about what you drive now (vehicle, character,
+map); red marks Ride shake and the follow mode that can make you sick.
 
 ---
 
@@ -228,13 +266,16 @@ cockpit is kept **per vehicle**, and you never have to press "save".
 - **Body follow on jumps** goes one step further: it is saved per **vehicle + character**
   (marked `[vehicle+character]`), because characters differ in build and posture. A character
   without its own values uses the vehicle's.
-- The **Default** button next to a `[vehicle]` value forgets just that value.
+- The **reset arrow** in front of a `[vehicle]` value forgets just that value.
+- The **shake masters** are per vehicle type: "Master: default amounts" scales the amounts you
+  did not set for a vehicle, "Master: saved amounts" the ones you did, on every vehicle of the
+  type picked above them.
 - **Without a vehicle** (in menus), the vehicle-related sliders are greyed out and only show the
   defaults; get into a vehicle to change them. Shared switches (camera lock, pilot visibility,
   on / off boxes, hotkeys…) work anywhere.
 - **Saved vehicles** lists every vehicle that has values. Open one to change them without
-  driving it: eye position, banking, body follow, cut distance, the five shake amounts,
-  **Advanced options** (all fine tuning, folded) and **Body follow per character** (folded,
+  driving it: eye position, banking, body follow, cut distance, the five shake amounts, the
+  Ride shake amounts, **Advanced options** (all fine tuning, folded) and **Body follow per character** (folded,
   one entry per character, each with "Forget this character's values").
   - **Everything back to default (eye position and body follow stay)** forgets the rest.
   - **Forget everything I set for this vehicle** forgets all of it, eye position too.
@@ -260,7 +301,7 @@ Northropi, Merlin, Rook, Saker. Other vehicles start from the original cockpit e
 
 > **Not every vehicle has been driven yet.** The eye positions and other fine values may not
 > fit some vehicles or characters. Adjust them to your taste while driving — your change is
-> saved for that vehicle automatically, and the Default button brings the built-in value back.
+> saved for that vehicle automatically, and the reset arrow brings the built-in value back.
 
 ---
 
@@ -274,20 +315,40 @@ rotates with the vehicle:
 
 | Option | |
 | --- | --- |
-| Level horizon | Only the heading is followed. Most comfortable. |
-| Follow hills *(default)* | Pitch follows slopes and jumps, smoothed and clamped to ±45°; roll stays level. |
-| Follow the vehicle, smoothed | Pitch, yaw and roll through a 0.15 s quaternion filter. |
-| Follow the vehicle, lightly smoothed | The same at 0.07 s. |
-| Exactly like the vehicle | Raw orientation. May cause motion sickness. |
+| 1. Level horizon | Only the heading is followed. |
+| 2. Follow hills *(default, most comfortable)* | Pitch follows slopes and jumps, smoothed and clamped to ±45°; roll stays level. |
+| 3. Follow the vehicle, smoothed | Pitch, yaw and roll through a 0.15 s quaternion filter. |
+| 4. Follow the vehicle, lightly smoothed | The same at 0.07 s. |
+| 5. Exactly like the vehicle | Raw orientation. May cause motion sickness. |
 
-The intro flyover and the crash camera can be left to the game (the cockpit stands down and
-restores the pilot), and the game's own third-person / over-the-shoulder / bonnet cameras are
-one key away.
+The game's own third-person / over-the-shoulder / bonnet cameras are one key away.
+
+### Game scenes and look back
+
+When the game shows one of its own shots, the cockpit can stand down (and restore the pilot)
+and take over again afterwards. Each has its own switch under **Game scenes and cameras**:
+
+| Shot | |
+| --- | --- |
+| Race intro flyover | Before the race, and the scenes after it. |
+| Outside view when crashing | The crash camera while you wreck or tumble. |
+| Takedowns | The game's takedown camera, about 2 s. |
+| Finish line camera | Your vehicle from outside, about 5 s before the results. |
+
+**Look back** does two things. The game's own look back now works in the cockpit view: the game
+shows its rear camera while you hold it, then you are back in the seat. And the look-back
+hotkey (right stick up unless you change it) turns you round in the cockpit seat while you hold
+it, so you see what is behind you from your own seat. Off: neither.
 
 ### Banking
 
 The view's roll is `Banking% × MAX × tanh(roll × amount / MAX)`: 100 % gives the tuned lean
 (amount 0.65, soft maximum 50.92°), 50 % half of it everywhere, 0 a level horizon.
+
+Choosing **5. Exactly like the vehicle** sets the banking the game was designed with (Banking
+200, maximum 90, amount 0.55 — like the original cockpit script); the other modes keep theirs.
+Values you set for a vehicle win in every mode. The live lean of the vehicle and of your view
+is shown under Banking.
 
 ### Cockpit shake
 
@@ -310,6 +371,30 @@ leans it forward out of the pilot body; a separate stiff spring gives the **thud
 wobble) — moving the view's *position* reads in VR as the vehicle moving, turning its *angle*
 reads as your head moving.
 
+### Ride shake
+
+*Off by default. For players who don't get motion sick, or who want even more sense of speed.
+Works best with the follow modes 3 to 5.*
+
+The normal cockpit shake moves only your view, so the world stays still and the cockpit seems
+to shake. Ride shake moves part of the shake to the world: the vehicle body itself shakes
+(`CustomisationRoot`; on podracers the pod mesh, at most 6 cm / 4°) and you move with it, so
+the cockpit and the VR world both shake. Its amounts are saved per vehicle and have no
+recommended value — what is fine differs from person to person:
+
+| Value | |
+| --- | --- |
+| Trembling: world share | How much of the engine, road, afterburner and ramjet trembling goes to the world. 0 = only the vehicle, 100 = only the world. |
+| Sways: world share | The same for road and hill sways, corner push and the landing press. Boost lunges always stay with the vehicle. |
+| Smooth: driving | Softens the trembling and sways while just driving. Boosts and landings stay sharp. 0 = off, 300 = most. |
+| Smooth: boosts and hits | Softens the afterburner and ramjet rumble, the corner push and the landing slam. |
+| Trembling in the air | How much trembling is left while airborne. 0 = a quiet flight, 100 = as on the ground. |
+| Landing slam | The vehicle slams down at touchdown and springs back. It grows with how fast you fell and how long you flew: a short hop barely bumps, a long flight hits hard. |
+
+While the ramjet or afterburner is on, the cockpit keeps rumbling. "Ride shake: tilt" (Fine
+tuning → All shaking: head spring) sets how much the body also tilts. Ride shake has its own masters per
+vehicle type, apart from the cockpit shake masters.
+
 ### Body follow on jumps
 
 Riders stand up in the air. While airborne the eye follows the pilot's chest bone (`spine_05`)
@@ -330,6 +415,27 @@ per boost type, easing back after. The renderer settings they need (`r.Tonemappe
 scene-colour fringe) are switched on only while an effect is visible and restored after.
 Hit-stop uses global time dilation (always restored); the warp pulse scales UEVR's world scale
 (+ = the world briefly shrinks away, − = it rushes at you).
+
+### Brightness per map
+
+Some maps and bright weather look blinding and washed out in VR while the monitor looks fine.
+Values here are saved for the map you are on only (shown in light blue); every other map stays
+as the game shows it. They are written into the game camera's post-process.
+
+| Value | |
+| --- | --- |
+| Adaptation: ignore the dark part | When the game measures how bright the picture is, it leaves out this share of the darkest pixels. Higher = it brightens less for dark surroundings. |
+| Adaptation: least light it brightens for | Dark places are not brightened beyond this. Raise it slowly if the outside looks blown out while you are in a tunnel. |
+| Brightness (exposure) | The whole picture, in camera stops (−1 = half as bright). |
+| Bright parts | Only the bright parts (sky, sunlit sand, glare). |
+| Bloom | The glow around bright things; in VR it can fog the whole view. |
+| Colour strength (saturation) | How strong the colours are. |
+| Contrast | Difference between dark and bright. |
+
+The outside looking far too bright from inside a tunnel, and fine again once you are out, is
+the game's eye adaptation brightening for the dark inside: the two adaptation values only
+change dark places, Brightness changes everything. **Saved maps** lists every map with values;
+"This map: back to the game's picture" forgets them.
 
 ### Race start
 
@@ -353,28 +459,26 @@ Never used in races.
   view after the script, so banking, "Follow hills" and the nose lift do nothing and the HUD
   moves instead. UEVR camera presets (Load Camera 0/1/2) can switch it back on — check this
   first if the view stops tilting.
-- **HDR / stereo-mismatch settings.** Nero's `user_script.txt` sets `r.AllowHDR 0` and
-  `r.HDR.EnableHDROutput 0` at startup, together with `r.SSR.Quality 0`,
-  `r.AmbientOcclusionLevels 0`, `r.LensFlareQuality 0` and `r.SSGI.LeakFreeReprojection 0`;
-  the `Renderer_r.DefaultFeature.AmbientOcclusion=1` and `Engine_r.AmbientOcclusionLevels=1`
-  lines are removed from `cvars_standard.txt` / `cvars_data.txt`. The v1.2.0 notes warn that
-  switching HDR on a live swapchain can leave the world black with only the UI. If that
-  happens, remove the two HDR lines from `user_script.txt` and use the `Engine.ini` way instead:
-  create `%LOCALAPPDATA%\StarWarsGalacticRacer\Saved\Config\Windows\Engine.ini` with
+- **HDR monitor: parts of the picture completely black?** The profile's `user_script.txt` turns
+  HDR off at startup (`r.AllowHDR 0`, `r.HDR.EnableHDROutput 0`). With an HDR monitor this can
+  leave parts of the picture black. Open `user_script.txt` in the profile folder and set both
+  lines to 1:
 
-  ```ini
-  [SystemSettings]
-  r.AllowHDR=0
-  r.HDR.EnableHDROutput=0
   ```
+  r.AllowHDR 1
+  r.HDR.EnableHDROutput 1
+  ```
+- **Stereo-mismatch settings.** Nero's `user_script.txt` also sets `r.SSR.Quality 0`,
+  `r.AmbientOcclusionLevels 0`, `r.LensFlareQuality 0` and `r.SSGI.LeakFreeReprojection 0` at
+  startup, and the `Renderer_r.DefaultFeature.AmbientOcclusion=1` and
+  `Engine_r.AmbientOcclusionLevels=1` lines are removed from `cvars_standard.txt` /
+  `cvars_data.txt`.
 - **Command-list settings.** `user_script.txt` also sets
   `r.RHICmd.ParallelTranslate.MaxCommandsPerTranslate 0` and
   `r.RHICmd.ParallelTranslate.CombineSingleAndParallel 1` (engine defaults 256 / 0). They change
   how the CPU hands draw commands to the GPU (fewer, larger batches), not what you see. It can
   steady the frame rate a little when the CPU is the bottleneck; on a fast CPU there may be no
   difference at all. If anything seems off, delete those two lines.
-
-  and make it **read-only** (the game removes unmanaged config files).
 - **Not every vehicle and character has been tested.** See the note in
   [Per-vehicle settings](#per-vehicle-settings-and-auto-save).
 - Values in the Korean and English builds are the same; only the menu language differs.
@@ -410,7 +514,7 @@ In the UEVR profile (`%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`):
 | --- | --- |
 | `scripts/swgr_vr_cockpit.lua` | The script. |
 | `data/swgr_vr_settings.json` | Shared settings, hotkeys, shared fine-tuning values you changed. |
-| `data/swgr_vr_vehicles.json` | Per-vehicle values: `eyes`, `feel` (% amounts), `detail` (fine tuning), `pilotFollow` (per character). Only what you changed. |
+| `data/swgr_vr_vehicles.json` | Per-vehicle values: `eyes`, `feel` (% amounts), `detail` (fine tuning and Ride shake), `pilotFollow` (per character); and `maps` (Brightness per map). Only what you changed. |
 | `data/swgr_vr_views.json` | Menu screen positions you saved. |
 | `fonts/NanumGothic-Regular.ttf` | Korean menu font (Korean profile only; Nanum Gothic, SIL Open Font License, `fonts/OFL.txt`). |
 

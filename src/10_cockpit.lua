@@ -29,22 +29,33 @@ if S.cameraLock ~= 'track' and S.cameraLock ~= 'hills' and S.cameraLock ~= 'smoo
     and S.cameraLock ~= 'light' and S.cameraLock ~= 'pilot' then S.cameraLock = 'smooth' end
 S.showCinematics = V.cfg.showCinematics
 S.showCrashCamera = V.cfg.showCrashCamera
+S.showTakedownCamera = V.cfg.showTakedownCamera
+S.showFinishCamera = V.cfg.showFinishCamera
+S.showLookBack = V.cfg.showLookBack ~= false
 
 local function finite(v) return type(v) == 'number' and v == v and math.abs(v) < 1e12 end
 local rotate = V.rotate
 
--- The intro flyover uses the engine's CineCameraActor (yield to it); the engine start shot uses
--- FuseCinematicCameraActor (handled by the "intro" section).
+-- The game's own cameras (view targets seen in races, 2026-10-17): the intro flyover and the scenes
+-- after a race use the engine's CineCameraActor, some starts a FuseSequenceCameraActor (yield to both,
+-- "intro flyover"); the engine start shot FuseCinematicCameraActor (handled by the "intro" section);
+-- crashes BP_CrashCameraActor_C (found by the vehicle's wrecked / tumbling state); taking a rival down
+-- BP_TakedownCameraActor_C (~2.4 s); crossing the finish line BP_PlayerFinishedCam_C (5 s, then the
+-- results CineCameraActor). Each has its own switch.
 local function detectCinematic()
     local pc = api:get_player_controller(0)
     local cm = pc and pc.PlayerCameraManager
     local target = cm and cm.ViewTarget.Target
     local name = target and target:get_class():get_fname():to_string() or ''
     if name ~= S.viewTargetClass then S.viewTargetClass = name; log('view target '..name) end
-    return name:find('CineCamera', 1, true) ~= nil
+    S.takedownCam = name:find('TakedownCamera', 1, true) ~= nil
+    S.finishCam = name:find('FinishedCam', 1, true) ~= nil
+    return name:find('CineCamera', 1, true) ~= nil or name:find('FuseSequenceCamera', 1, true) ~= nil
 end
 local function yielding()
     return (S.showCinematics and S.cinematic) or (S.showCrashCamera and S.crashing)
+        or (S.showTakedownCamera and S.takedownCam) or (S.showFinishCamera and S.finishCam)
+        or S.lookBackGame
 end
 S.yielding = yielding
 
@@ -97,6 +108,15 @@ local function eulerFrom(q)
     return math.deg(math.asin(sinPitch)),
         math.deg(math.atan(2 * (q[4] * q[3] + q[1] * q[2]), 1 - 2 * (q[2] ^ 2 + q[3] ^ 2))),
         math.deg(math.atan(-2 * (q[4] * q[1] + q[2] * q[3]), 1 - 2 * (q[1] ^ 2 + q[2] ^ 2)))
+end
+-- looking back from the cockpit seat (the look back hotkey, S.lookBackKey): the same view turned half way
+-- round about its own up axis - you turn round in the seat
+local function turnRound(pitch, yaw, roll)
+    local h = math.pi / 360
+    local sp, cp, sy, cy, sr, cr = math.sin(pitch * h), math.cos(pitch * h), math.sin(yaw * h), math.cos(yaw * h), math.sin(roll * h), math.cos(roll * h)
+    local a = { cr * sp * sy - sr * cp * cy, -cr * sp * cy - sr * cp * sy, cr * cp * sy - sr * sp * cy, cr * cp * cy + sr * sp * sy }
+    -- a x (0, 0, 1, 0): half a turn about the view's own up axis
+    return eulerFrom({ a[2], -a[1], a[4], -a[3] })
 end
 local function cameraRotation(q, hq)
     if S.cameraLock == 'smooth' then return eulerFrom(smoothedQuat(q, 0.15)) end
@@ -260,6 +280,7 @@ end
 -- VehicleState is physics data and can differ from the rendered / interpolated mesh.
 function S.draw()
     if V.beforeDraw then pcall(V.beforeDraw) end      -- intro: reads the game camera of this frame
+    if V.beforeSeat then pcall(V.beforeSeat) end      -- shake along: moves the vehicle body first
     S.renderEye = nil; S.renderSeat = nil
     if not S.enabled or not S.anchor or yielding() then return end
     local p, v = pawnAndVehicle()
@@ -287,6 +308,7 @@ function S.draw()
             local l, r = pov.Location, pov.Rotation
             l.X, l.Y, l.Z = S.renderEye[1], S.renderEye[2], S.renderEye[3]
             r.Pitch, r.Yaw, r.Roll = cameraRotation(q, hq)
+            if S.lookBackSeat then r.Pitch, r.Yaw, r.Roll = turnRound(r.Pitch, r.Yaw, r.Roll) end
         end
     end
 end
@@ -294,7 +316,8 @@ function S.update(dt)
     local p, v = pawnAndVehicle()
     if not p then
         S.pawn = 0; S.anchor = nil; S.renderEye = nil; S.restore = {}; S.pilotOverrideActive = false
-        S.cinematic = false; S.crashing = false; S.cycleRequested = 0
+        S.cinematic = false; S.crashing = false; S.takedownCam = false; S.finishCam = false; S.cycleRequested = 0
+        S.lookBackGame = false; S.racing = false; S.lookBackSeat = false
         return
     end
     local id = p:get_address()
@@ -312,9 +335,40 @@ function S.update(dt)
     end
     local ok, cinematic = pcall(detectCinematic)
     S.cinematic = ok and cinematic or false
+    if not ok then S.takedownCam, S.finishCam = false, false end
     local okCrash, crashing = pcall(function() return v:IsWrecked() or v:IsTumbling() end)
     crashing = okCrash and crashing or false
     if crashing ~= S.crashing then S.crashing = crashing; log('crashing '..tostring(crashing)) end
+    -- racing now - the vehicle's own view (not a menu or scene camera), the game clock runs, the player
+    -- drives: the hotkeys keep the game's camera change button from the game then
+    local okT, gt = pcall(function() return p:GetGameTimeSinceCreation() end)
+    gt = okT and tonumber(gt) or nil
+    local okS, src = pcall(function() return tonumber(p.InputSource) end)
+    S.racing = gt ~= nil and S.lastGameT ~= nil and gt ~= S.lastGameT and not (okS and src == 2)
+        and (S.viewTargetClass or ''):find('^VBP_') ~= nil
+    S.lastGameT = gt
+    -- which button changes the game's camera: the game's control scheme (Default: RB, Alternative: the
+    -- right stick click), read now and then from its user settings
+    if V.t >= (S.schemeNext or 0) then
+        S.schemeNext = V.t + 2
+        local okC, scheme = pcall(function()
+            local gus = api:find_uobject('Class /Script/Engine.GameUserSettings'):get_class_default_object():GetGameUserSettings()
+            return tonumber(gus.ControlScheme)
+        end)
+        scheme = okC and scheme or nil
+        if scheme ~= S.controlScheme then
+            S.controlScheme = scheme
+            log('control scheme '..tostring(scheme)..(scheme == 1 and ' (alternative: camera change = right stick click)' or ' (default: camera change = RB)'))
+        end
+    end
+    -- the game's own look back (End): the cockpit steps aside while it shows
+    local okLook, gameLook = pcall(function() return v.LookBackRequested end)
+    gameLook = okLook and gameLook == true
+    if gameLook ~= S.lookBackGameWas then S.lookBackGameWas = gameLook; log('look back '..tostring(gameLook)) end
+    S.lookBackGame = S.showLookBack and gameLook
+    -- and from the cockpit seat while the look back hotkey is held (right stick up by default)
+    local seat = S.showLookBack and S.lookBackKey == true and not gameLook
+    if seat ~= S.lookBackSeat then S.lookBackSeat = seat; log('look back in the seat '..tostring(seat)) end
     if yielding() then restorePilot(p); return end
     S.poll = S.poll - (dt or 0)
     if S.poll <= 0 or S.anchor == nil then
@@ -350,6 +404,11 @@ function S.apply(view, scale, position, rotation)
     rotation.x, rotation.y, rotation.z = cameraRotation(q, hq)
     S.applied = S.applied + 1
     V.runHooks(view, position, rotation)
+    -- (menu: how far the vehicle leans and how far the view does, after everything)
+    local _, _, vehicleRoll = eulerFrom(q)
+    S.rollNow = S.rollNow or {}
+    S.rollNow[1], S.rollNow[2] = vehicleRoll, ((rotation.z + 180) % 360) - 180
+    if S.lookBackSeat then rotation.x, rotation.y, rotation.z = turnRound(rotation.x, rotation.y, rotation.z) end
     return true
 end
 local function guarded(fn, ...)

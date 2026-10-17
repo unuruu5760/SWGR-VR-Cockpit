@@ -79,9 +79,33 @@ V.DEFAULTS = {
     pilot = 'head',                -- 'head' / 'hidden' / 'visible'
     showCinematics = true,         -- race intro flyover with the game camera
     showCrashCamera = true,        -- the game's crash camera when crashing
+    showTakedownCamera = true,     -- the game's takedown camera when you take a rival down
+    showFinishCamera = true,       -- the game's finish camera when you cross the line
+    showLookBack = true,           -- look back: the game's own (End: the cockpit steps aside) and from the cockpit seat (hotkey)
     roll = 100,                    -- % banking (shared; a vehicle's own % is in the vehicles file)
+    -- "Exactly like the vehicle" keeps a banking of its own (the game's lean); the other modes another one
+    bankMode = 'other',            -- which of the two the shared banking values are now
+    bankPilotRoll = 200, bankPilotMax = 90, bankPilotAmount = 0.55,
+    bankOtherRoll = 100, bankOtherMax = 50.92, bankOtherAmount = 0.65,
     feelOn = true,                 -- cockpit shake / boost punch
     engine = 100, road = 100, motion = 100, boost = 100, landing = 100,   -- %
+    shakeSaved = 100, shakeDefault = 100,   -- (older versions: one pair for all types, read once into the ones below)
+    -- % on top of the shake, per vehicle type: the amounts saved for a vehicle / all others
+    shakeDefault_Bike = 100, shakeSaved_Bike = 100, rideDefault_Bike = 100, rideSaved_Bike = 100,
+    shakeDefault_Car = 100, shakeSaved_Car = 100, rideDefault_Car = 100, rideSaved_Car = 100,
+    shakeDefault_Skimmer = 100, shakeSaved_Skimmer = 100, rideDefault_Skimmer = 100, rideSaved_Skimmer = 100,
+    shakeDefault_Plane = 100, shakeSaved_Plane = 100, rideDefault_Plane = 100, rideSaved_Plane = 100,
+    shakeMasterByType = false,
+    shakeAlongOn = false,          -- the vehicle body shakes too and carries you along (test)
+    -- (below: older versions' shaking-along amounts, read once into the shared values; now per vehicle)
+    shakeAlongPerVehicle = false,
+    landSlamV2 = false,            -- the landing slam amount got a new meaning (100 = the new design): old values dropped once
+    shakeAlong = 100,              -- % of the trembling the vehicle body takes
+    shakeAlongAir = 50,            -- % of that it keeps while airborne (the sense of speed)
+    shakeAlongSmooth = 0,          -- % its engine / road part is made slower and softer (0 = untouched)
+    shakeAlongSmooth2 = 0,         -- % everything else the body does is made softer (0 = untouched)
+    shakeAlongMove = 100,          -- % of the lunges, sways, bobbing and the landing press it takes
+    shakeAlongLand = 500,          -- % landing slam of the vehicle body (500 was needed to feel it, 2026-10-17)
     hitstop = true, warp = true,
     screen = 100,                  -- % boost screen colours (0 = off)
     intro = true,                  -- engine start shot, then into the cockpit
@@ -93,6 +117,8 @@ V.DEFAULTS = {
     keyToggle = 'F3', keyCycle = 'F4', keyRecenter = 'None',
     padToggle = 'None', padCycle = 'None', padRecenter = 'None',
     keyExtras = 'F5', padExtras = 'None',
+    keyLookBack = 'None', padLookBack = 'Right stick up',   -- look back from the cockpit seat while held
+    blockCamButton = true,         -- cockpit, racing: the game's camera change button (RB, alternative controls: right stick click) is kept from the game (its HUD moves with each camera)
     detail = {},                   -- fine tuning: key -> value (only what the user changed)
 }
 function V.resetSettings()
@@ -222,12 +248,12 @@ function V.pilotBuiltin(m, c, key)
     return type(t) == 'table' and tonumber(t[key]) or nil
 end
 V.VEHICLES_FILE = 'swgr_vr_vehicles.json'
-V.veh = { eyes = {}, feel = {}, detail = {}, pilotFollow = {}, format = 3 }
+V.veh = { eyes = {}, feel = {}, detail = {}, pilotFollow = {}, maps = {}, format = 3 }   -- (maps: picture per map)
 V.vehFormat = 3                            -- format of the loaded file (older ones are converted)
 do
     local ok, t = pcall(json.load_file, V.VEHICLES_FILE)
     if ok and type(t) == 'table' then
-        for _, k in ipairs({ 'eyes', 'feel', 'detail', 'pilotFollow' }) do
+        for _, k in ipairs({ 'eyes', 'feel', 'detail', 'pilotFollow', 'maps' }) do
             if type(t[k]) == 'table' then V.veh[k] = t[k] end
         end
         V.vehFormat = tonumber(t.format) or 1
