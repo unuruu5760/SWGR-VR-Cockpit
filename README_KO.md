@@ -435,14 +435,16 @@ Northropi, Merlin, Rook, Saker. 나머지 차량은 원작 콕핏의 기본 눈 
   스크립트 다음에 시점을 수평으로 만들어 버려서 기울기·언덕 따라가기·기수 들림이 안 되고
   HUD만 움직여요. UEVR 카메라 프리셋(Load Camera 0/1/2)이 이걸 다시 켤 수 있어요. 시점이 안
   기울면 이것부터 확인하세요.
-- **HDR 모니터에서 화면 일부가 아예 검게 나오나요?** 프로필의 `user_script.txt`는 시작할 때
-  HDR을 꺼요(`r.AllowHDR 0`, `r.HDR.EnableHDROutput 0`). HDR 모니터에서는 이것 때문에 화면 일부가
-  검게 나올 수 있어요. 프로필 폴더의 `user_script.txt`를 열어서 두 줄을 1로 바꾸세요:
+- **HDR 모니터에서 화면 일부가 아예 검게 나오나요?** UEVR에서는 HDR이 제대로 안 돼요. 프로필의
+  `user_script.txt`는 시작할 때 HDR을 꺼요. 두 줄을 0으로 두세요(1로 바꿨다면 0으로 되돌리세요):
 
   ```
-  r.AllowHDR 1
-  r.HDR.EnableHDROutput 1
+  r.AllowHDR 0
+  r.HDR.EnableHDROutput 0
   ```
+
+  그래도 검게 나오면 VR로 할 때는 윈도우 HDR을 끄세요(설정 → 시스템 → 디스플레이 → HDR 사용).
+  (처음 올린 v2.1.0 안내에는 1로 바꾸라고 잘못 적혀 있었어요.)
 - **화면 어긋남 설정.** Nero의 `user_script.txt`는 시작할 때 `r.SSR.Quality 0`,
   `r.AmbientOcclusionLevels 0`, `r.LensFlareQuality 0`, `r.SSGI.LeakFreeReprojection 0`도 설정하고,
   `cvars_standard.txt` / `cvars_data.txt`에서 `Renderer_r.DefaultFeature.AmbientOcclusion=1`과

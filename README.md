@@ -459,15 +459,17 @@ Never used in races.
   view after the script, so banking, "Follow hills" and the nose lift do nothing and the HUD
   moves instead. UEVR camera presets (Load Camera 0/1/2) can switch it back on — check this
   first if the view stops tilting.
-- **HDR monitor: parts of the picture completely black?** The profile's `user_script.txt` turns
-  HDR off at startup (`r.AllowHDR 0`, `r.HDR.EnableHDROutput 0`). With an HDR monitor this can
-  leave parts of the picture black. Open `user_script.txt` in the profile folder and set both
-  lines to 1:
+- **HDR monitor: parts of the picture completely black?** HDR does not work through UEVR. The
+  profile's `user_script.txt` turns it off at startup; keep both lines at 0 (if you changed them
+  to 1, set them back):
 
   ```
-  r.AllowHDR 1
-  r.HDR.EnableHDROutput 1
+  r.AllowHDR 0
+  r.HDR.EnableHDROutput 0
   ```
+
+  Still black? Turn Windows HDR off (Settings → System → Display → Use HDR) while playing in VR.
+  (The first v2.1.0 notes said to set these to 1 — that was wrong.)
 - **Stereo-mismatch settings.** Nero's `user_script.txt` also sets `r.SSR.Quality 0`,
   `r.AmbientOcclusionLevels 0`, `r.LensFlareQuality 0` and `r.SSGI.LeakFreeReprojection 0` at
   startup, and the `Renderer_r.DefaultFeature.AmbientOcclusion=1` and

@@ -56,8 +56,10 @@ files are the same as in v2.0.1; when updating from v2.0.x, replacing
 - Korean menu: controller buttons translated.
 
 **HDR monitors**
-- If parts of the picture are completely black on an HDR monitor, set the two HDR lines in the
-  profile's `user_script.txt` to 1: `r.AllowHDR 1` and `r.HDR.EnableHDROutput 1`.
+- HDR does not work through UEVR. If parts of the picture are completely black on an HDR
+  monitor, keep the two HDR lines in the profile's `user_script.txt` at 0 (`r.AllowHDR 0`,
+  `r.HDR.EnableHDROutput 0`, the profile default; set them back if you changed them to 1) and
+  turn Windows HDR off while playing in VR. The first v2.1.0 notes said 1 — that was wrong.
 
 # v2.0.1 — 15 October 2026
 
