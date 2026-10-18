@@ -1,3 +1,53 @@
+# v2.1.1 — 18 October 2026
+
+Same backend and profile files as v2.1.0: replacing `scripts/swgr_vr_cockpit.lua` is enough, and
+your settings stay (see "Your values" below).
+
+**Fixed**
+- **Values saved for a vehicle seemed to reset at the race start** (reported on a podracer: the
+  Ride shake world shares went back to 100 three or four times). In the garage (Edit Vehicle)
+  every part slot can take another model's part, and the game's event vehicles mix models too.
+  Such a vehicle was named after the model most of its meshes came from, checked again every few
+  seconds, so with a tie, parts loading one after another or a part breaking off its name changed,
+  and the menu showed the values of another name. Now a vehicle is named after the model of the
+  part its seat is in — the rear on landspeeders and skim speeders, the controls on speeder bikes,
+  the pod on podracers — read from that part's meshes, else from the vehicle's recipe. Once found
+  it stays for that vehicle. Swapping the seat part changes the seat and the cockpit, so it is
+  another vehicle; swapping any other part is not.
+
+**Changed**
+- **Brightness per track and weather** (was: per map). A map has several tracks (forward,
+  reverse, variants), and each race has its own weather and time of day, so a value that fixed a
+  blinding sunny race made the night race on the same map too dark. Values are now saved for the
+  track and weather you race only; every other one stays as the game shows it. The menu shows the
+  game's names: track, *Reverse*, planet, and the light (Day, Sunset, Night, Dawn, Twilight,
+  Overcast, with rain or snow where the weather has it), e.g. "Fallen Empire (Jakku) / Day".
+- **VR picture for every track** (new section): values for every track and weather at once; a
+  track's own values replace them there.
+- **Saved tracks** (was Saved maps) lists every track and weather with values, editable from
+  anywhere.
+- The picture values: Brightness, Bloom, Colour strength and Contrast in the section; the three
+  older ones (eye adaptation: leave out the dark part, brighten no further than; bright parts) under
+  **More (older controls)**.
+- The menu shows the model names the game shows (e.g. RAR 27, Napaco D, HC-8).
+
+**Your values**
+- Values saved under the name an older version gave a vehicle move to its new name the first time
+  you drive it; if the new name already has values, those stay. Nothing is deleted: what an older
+  name had is kept in the vehicles file (`moved`) and comes back if a vehicle of that name turns up.
+- Brightness saved for a whole map in v2.1.0 goes to the first race you drive on that map whose
+  track and weather can be read (the paddock keeps its own).
+- The settings file is tidied (keys older versions used and this one no longer needs are read once
+  and carried over). Before that, an older file is kept once as
+  `data/swgr_vr_settings_backup_format1.json`.
+- Tested: settings and per-vehicle values saved by v2.0.0, v2.0.1 and v2.1.0 (plain and mixed
+  vehicles) all come through (`tests/upgrade_test.py`); vehicle names for every model, mixed parts,
+  recipes and part loading orders (`tests/vehicle_names_test.py`).
+
+**Docs**
+- HDR: keep `r.AllowHDR 0` and `r.HDR.EnableHDROutput 0` (the first v2.1.0 notes said 1, which
+  was wrong).
+
 # v2.1.0 — 17 October 2026
 
 Use joeyhodge's latest UEVR backend,

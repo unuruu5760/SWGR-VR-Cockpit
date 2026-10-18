@@ -13,6 +13,7 @@ local AB_ACTIVE, RJ_ACTIVE, RJ_GRACE = 0, 3, 5
 local AB_MIN_HOLD, AB_REPEAT = 0.12, 1.0          -- same rule as the afterburner lunge (no flicker on taps)
 
 local now = { vig = 0, sat = 0, tint = false, r = 1, g = 1, b = 1, vigOn = false }
+local fusionTold = false
 local function writeSettings(s, v)
     -- the vignette stays overridden (0 when idle) while the renderer switch is on, because the
     -- switch also lets the game's own vignette through
@@ -33,9 +34,44 @@ local function writeSettings(s, v)
         if pic.low then
             s.bOverride_AutoExposureLowPercent = true; s.AutoExposureLowPercent = pic.low
             -- (the high end must stay above it)
-            s.bOverride_AutoExposureHighPercent = true; s.AutoExposureHighPercent = math.min(100, math.max(90, pic.low + 1.5))
+            s.bOverride_AutoExposureHighPercent = true; s.AutoExposureHighPercent = pic.high or math.min(100, math.max(90, pic.low + 1.5))
         end
         if pic.minBright then s.bOverride_AutoExposureMinBrightness = true; s.AutoExposureMinBrightness = pic.minBright end
+        if pic.maxBright then s.bOverride_AutoExposureMaxBrightness = true; s.AutoExposureMaxBrightness = pic.maxBright end
+        if pic.glare then s.bOverride_LocalExposureHighlightContrastScale = true; s.LocalExposureHighlightContrastScale = pic.glare end
+        if pic.offset then
+            s.bOverride_ColorOffset = true
+            local o = s.ColorOffset; o.X, o.Y, o.Z, o.W = 0, 0, 0, pic.offset; s.ColorOffset = o
+        end
+        if pic.satHi then
+            s.bOverride_ColorSaturationHighlights, s.bOverride_ColorSaturationMidtones, s.bOverride_ColorSaturationShadows = true, true, true
+            local h = s.ColorSaturationHighlights; h.X, h.Y, h.Z, h.W = 1, 1, 1, pic.satHi; s.ColorSaturationHighlights = h
+            local m = s.ColorSaturationMidtones; m.X, m.Y, m.Z, m.W = 1, 1, 1, pic.satMid; s.ColorSaturationMidtones = m
+            local l = s.ColorSaturationShadows; l.X, l.Y, l.Z, l.W = 1, 1, 1, pic.satLo; s.ColorSaturationShadows = l
+        end
+        if pic.temp then s.bOverride_WhiteTemp = true; s.WhiteTemp = pic.temp end
+        if pic.shadow then s.bOverride_LocalExposureShadowContrastScale = true; s.LocalExposureShadowContrastScale = pic.shadow end
+        if pic.fusion then
+            local ok, back = pcall(function()
+                s.bOverride_LocalExposureMethod = true; s.LocalExposureMethod = 1
+                return s.LocalExposureMethod
+            end)
+            if not fusionTold then
+                fusionTold = true
+                log('local exposure method Fusion: '..(ok and ('written, reads back '..tostring(back)) or ('could not be written: '..tostring(back))))
+            end
+        end
+        if pic.gamma then
+            s.bOverride_ColorGamma = true
+            local g = s.ColorGamma; g.X, g.Y, g.Z, g.W = 1, 1, 1, pic.gamma; s.ColorGamma = g
+            if pic.capMax then
+                s.bOverride_ColorCorrectionShadowsMax = true; s.ColorCorrectionShadowsMax = pic.capMax
+                s.bOverride_ColorGammaShadows = true
+                local gs = s.ColorGammaShadows; gs.X, gs.Y, gs.Z, gs.W = 1, 1, 1, 1 / pic.gamma; s.ColorGammaShadows = gs
+                s.bOverride_ColorGainShadows = true
+                local gn = s.ColorGainShadows; gn.X, gn.Y, gn.Z, gn.W = 1, 1, 1, pic.capGain; s.ColorGainShadows = gn
+            end
+        end
         if math.abs((pic.hi or 1) - 1) > 0.001 then
             s.bOverride_ColorGainHighlights = true
             local g = s.ColorGainHighlights; g.X, g.Y, g.Z, g.W = 1, 1, 1, pic.hi; s.ColorGainHighlights = g

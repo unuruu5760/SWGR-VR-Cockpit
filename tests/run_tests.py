@@ -119,9 +119,14 @@ local pps = MOCK.cm.CameraCachePrivate.POV.PostProcessSettings
 pps.bOverride_AutoExposureBias, pps.AutoExposureBias = nil, 0
 frames(5)
 local untouched = tostring(pps.bOverride_AutoExposureBias)
-local picMap = SWGR_VR.picMapName()
-for k, val in pairs({ picExp = -1, picHi = 60, picBloom = 50, picSat = 120, picLow = 97, picMinEV = 8 }) do SWGR_VR.setPicVal(picMap, k, val) end
+local picMap = SWGR_VR.picPlace()
+for k, val in pairs({ picExp = -1, picHi = 60, picBloom = 50, picSat = 120, picLow = 97, picMinEV = 8, picGlare = 40, picShadow = 100,
+        picBlack = 50, picVib = 50, picTemp = -30 }) do SWGR_VR.setPicVal(picMap, k, val) end
 frames(5)
+note(string.format('VR picture colour: black offset %.3f (override %s), saturation bright / middle / dark %.2f / %.2f / %.2f, white balance %.0f K', pps.ColorOffset.W,
+    tostring(pps.bOverride_ColorOffset), pps.ColorSaturationHighlights.W, pps.ColorSaturationMidtones.W, pps.ColorSaturationShadows.W, pps.WhiteTemp))
+note(string.format('VR picture local exposure: glaring places %.2f (override %s), dark places %.2f (override %s)', pps.LocalExposureHighlightContrastScale,
+    tostring(pps.bOverride_LocalExposureHighlightContrastScale), pps.LocalExposureShadowContrastScale, tostring(pps.bOverride_LocalExposureShadowContrastScale)))
 note(string.format('VR picture adaptation: dark part ignored %.0f (high %.1f), least light %.3f', pps.AutoExposureLowPercent, pps.AutoExposureHighPercent, pps.AutoExposureMinBrightness))
 note(string.format('picture per map (%s = %s): untouched writes exposure %s; set: exposure %.2f (override %s), bright parts %.2f, bloom %.3f, saturation %.2f',
     tostring(picMap), SWGR_VR.mapLabel(picMap), untouched, pps.AutoExposureBias, tostring(pps.bOverride_AutoExposureBias), pps.ColorGainHighlights.W, pps.BloomIntensity, pps.ColorSaturation.W))
@@ -236,6 +241,36 @@ MOCK.menu('click'); MOCK.menu('idle')
 frames(72)
 -- crash camera / tumbling
 v2.IsTumbling = function() return true end; frames(30); v2.IsTumbling = function() return false end; frames(30)
+-- parts swapped between models in the garage: the vehicle is named after its seat part, whatever
+-- most parts are and in whatever order the game lists them
+do
+    local function part(model, i)
+        local path = '/Game/Griffin/Vehicles/Planes/Customisation/'..model..'/EngineL/SM_'..model..'EngineL_Panel0'..i
+        return { StaticMesh = { get_full_name = function() return path end, Sockets = {} }, SkeletalMesh = false }
+    end
+    local names = {}
+    for race = 1, 2 do
+        local pm = MOCK.makeVehicle('Plane', 'Myth')
+        local orig, extra, id = pm.K2_GetComponentsByClass, {}, 'pawn_mixed'..race
+        for i = 1, 6 do extra[#extra + 1] = part('Sordes', i) end
+        pm.get_address = function() return id end
+        pm.K2_GetComponentsByClass = function(self, c)
+            local r = orig(self, c)
+            if not c.name:find('StaticMeshComponent', 1, true) then return r end
+            local t = {}
+            if race == 2 then for _, x in ipairs(extra) do t[#t + 1] = x end end
+            for _, x in ipairs(r) do t[#t + 1] = x end
+            if race == 1 then for _, x in ipairs(extra) do t[#t + 1] = x end end
+            return t
+        end
+        MOCK.pawn = pm; frames(72 * 4)
+        names[race] = tostring(SWGR_VR.model)
+    end
+    note('mixed parts (seat on a Myth part, 6 Sordes parts), two races: '..names[1]..', '..names[2])
+    if names[1] ~= 'Plane/Myth' or names[2] ~= 'Plane/Myth' then
+        MOCK.errors[#MOCK.errors + 1] = 'mixed parts: vehicle named '..names[1]..' / '..names[2]..' (not after the seat part)'
+    end
+end
 -- the campaign's memory races use another podracer class (VBP_Plane_Memory_C): still a Plane
 local pawn3 = MOCK.makeVehicle('Plane', 'Tarchia', 'VBP_Plane_Memory_C')
 MOCK.pawn = pawn3; frames(72 * 4)

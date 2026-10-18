@@ -78,13 +78,11 @@ V.tunable('boost', 'warpAmount', 3.0, -5, 5, 'Warp pulse strength (+ / -)', 'At 
 -- vehicle type: one overall % for the amounts saved for a vehicle, one for all the others (its default
 -- or the shared value), so the defaults can be turned up or down without touching what was set by hand.
 -- (Older versions had one pair for every type: it becomes each type's, once.)
-if not V.cfg.shakeMasterByType then
+if V.cfgFormat < 2 and not V.old.shakeMasterByType then
     for _, ty in ipairs({ 'Bike', 'Car', 'Skimmer', 'Plane' }) do
-        V.cfg['shakeDefault_'..ty] = tonumber(V.cfg.shakeDefault) or 100
-        V.cfg['shakeSaved_'..ty] = tonumber(V.cfg.shakeSaved) or 100
+        V.cfg['shakeDefault_'..ty] = tonumber(V.old.shakeDefault) or 100
+        V.cfg['shakeSaved_'..ty] = tonumber(V.old.shakeSaved) or 100
     end
-    V.cfg.shakeMasterByType = true
-    V.save()
 end
 local function master(kind)
     local ty = V.vtype or V.typeOf(V.model)
@@ -255,22 +253,21 @@ V.tunable('feel', 'shakeAlongMove', 100, 0, 100, 'Ride shake: sways (world share
 V.tunable('feel', 'shakeAlongLand', 100, 0, 300, 'Ride shake: landing slam',
     'How hard you slam down with the vehicle when you land: bigger after higher drops, longer flights and at speed. 0 = off, 100 = default.').main = true
 -- (older versions kept them in the settings for every vehicle: those become the shared values, once)
-if not V.cfg.shakeAlongPerVehicle then
+if V.cfgFormat < 2 and not V.old.shakeAlongPerVehicle then
     for _, key in ipairs({ 'shakeAlong', 'shakeAlongSmooth', 'shakeAlongSmooth2', 'shakeAlongAir', 'shakeAlongMove' }) do
-        local old, item = tonumber(V.cfg[key]), V.TUNE_INDEX[key]
+        local old, item = tonumber(V.old[key]), V.TUNE_INDEX[key]
         if old and item and math.abs(old - item.base) > 0.001 then V.cfg.detail[key] = old end
     end
-    V.cfg.shakeAlongPerVehicle = true
-    V.save()
 end
 -- (the landing slam amount changed meaning on 2026-10-17: 100 = the new design, the old one needed
 -- 500 to be felt at all. Values saved with the old meaning are dropped, once.)
-if not V.cfg.landSlamV2 then
+if V.cfgFormat < 2 and not V.old.landSlamV2 then
     V.cfg.detail.shakeAlongLand = nil
     for m in pairs(V.veh.detail) do V.clearOwnVal('detail', m, 'shakeAlongLand') end
-    V.cfg.landSlamV2 = true
-    V.save(); V.saveVeh()
+    V.saveVeh()
 end
+-- (an older settings file: written again in today's shape, its old keys gone)
+if V.cfgFormat < 2 then V.save() end
 local car = { pawn = nil, comp = nil, parent = nil, base = nil, last = nil, failed = nil, moved = false, hit = nil, loc = nil, rot = nil, free = false }
 local POD_MOVE, POD_TILT = 6, 4            -- podracer pod mesh: at most this far (cm) / this much tilt (degrees)
 local carT = { 0, 0, 0 }                   -- the part of the shake the vehicle body takes (vehicle axes, cm)

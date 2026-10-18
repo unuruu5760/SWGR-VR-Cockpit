@@ -1,4 +1,4 @@
-# STAR WARS Galactic Racer — VR Cockpit for UEVR (v2.1.0)
+# STAR WARS Galactic Racer — VR Cockpit for UEVR (v2.1.1)
 
 A UEVR profile and a single Lua script for **STAR WARS Galactic Racer**: you sit in the pilot
 seat of every vehicle, and the cockpit finally moves — engine and road rumble, boost lunges,
@@ -31,6 +31,7 @@ Nanum Gothic by Naver (SIL Open Font License 1.1).
 
 ## Contents
 
+- [What's new in v2.1.1](#whats-new-in-v211)
 - [What's new in v2.1.0](#whats-new-in-v210)
 - [What's new in v2.0.0](#whats-new-in-v200)
 - [Install](#install)
@@ -45,6 +46,18 @@ Nanum Gothic by Naver (SIL Open Font License 1.1).
 - [Building from source](#building-from-source)
 
 ---
+
+## What's new in v2.1.1
+
+- **Saved values no longer seem to reset on vehicles with mixed parts.** A vehicle is now known by
+  the part its seat is in: the rear on landspeeders and skim speeders, the controls on speeder
+  bikes, the pod on podracers. Swap any other part in Edit Vehicle (or drive the game's event
+  vehicles, which mix models) and it stays the same vehicle, with its values.
+- **Brightness per track and weather** (was per map). A sunny race and a night race on the same
+  track keep their own values. **VR picture for every track** sets values for all of them at once,
+  and **Saved tracks** lists them by the game's names, e.g. "Fallen Empire (Jakku) / Day".
+- **Your values come along**: values saved under older vehicle names, v2.1.0's brightness per map
+  and older settings are carried over (details in [CHANGELOG.md](CHANGELOG.md)).
 
 ## What's new in v2.1.0
 
@@ -124,8 +137,8 @@ Full list: [CHANGELOG.md](CHANGELOG.md).
 Each language has its own release with a file named **`SWGR-Win64-Shipping.zip`** — the name
 UEVR needs, so there is nothing to rename:
 
-- English menu: [**v2.1.0**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.0)
-- Korean menu: [**v2.1.0-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.0-ko)
+- English menu: [**v2.1.1**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.1)
+- Korean menu: [**v2.1.1-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.1-ko)
 
 1. Close the game, **back up** your current profile folder
    `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` (copy it somewhere else) and then **delete it**.
@@ -151,13 +164,15 @@ For Nero's stereo-mismatch fixes, see [Known issues and notes](#known-issues-and
 
 ### 3. Pak mod (optional)
 
-**`SWGR-NoBlackBars-pak-v2.1.0.zip`** (in both releases) removes the black bars and panels that
+**`SWGR-NoBlackBars-pak-v2.1.1.zip`** (in both releases) removes the black bars and panels that
 look bad in VR. See [Pak mod](#pak-mod) right below. It is the same as in v2.0.x.
 
-### Updating from v2.0.x
+### Updating from v2.0.x or v2.1.0
 
 Replace `scripts/swgr_vr_cockpit.lua` in your profile with the one from the release of your
-language. The other profile files did not change, and your settings in `data` stay.
+language. The other profile files did not change, and your settings in `data` stay (they are
+carried over to the new vehicle names and to brightness per track; see the
+[CHANGELOG](CHANGELOG.md)).
 
 ### Updating from v1.2.0
 
@@ -187,7 +202,7 @@ matter.
 
 - It is separate from the script and the profile: use it with them, without them, or not at all.
   The cockpit works fine without it.
-- Install: extract `SWGR-NoBlackBars-pak-v2.1.0.zip` into the game folder so
+- Install: extract `SWGR-NoBlackBars-pak-v2.1.1.zip` into the game folder so
   `zzz_SWGR_NoBlackBars_P.pak`, `.ucas` and `.utoc` end up in
   `STAR WARS Galactic Racer\Griffin\Content\Paks\~mods\`. The game's own pak files are not touched.
 - Remove: delete those three files.
@@ -230,18 +245,19 @@ explanation. From top to bottom:
 | **View and eye position** | Eye position (sideways / forward / up), Follow the vehicle (follow modes 1–5), **Banking %** with the live lean, Pilot visibility, **Follow the pilot on jumps** (up / forward), **Cut what is right at the eye** (cut distance), and the group **Game scenes and cameras**: race intro flyover, outside view when crashing, takedowns, finish line camera, **Look back**. |
 | **Cockpit shake** | On / off, five amounts in % (Engine, Road, Corners / drifts, Boost punch, Landings and hits), the **masters per vehicle type**, **Landing hits your head**, and **Ride shake** (in red: its six amounts and its own masters). |
 | **Boost effects** | Screen colours and flash %, hit-stop, warp pulse. |
-| **Brightness per map** | Seven picture values for the map you are on (in yellow). |
+| **VR picture for every track** | Picture values for every track and weather at once (in yellow). |
+| **Brightness per track and weather** | Picture values for the track and weather you race (in yellow): Brightness, Bloom, Colour strength, Contrast, and three older ones under More. |
 | **Race start** | Engine start shot then into the cockpit, car body engine hum %. |
 | **Fine tuning (advanced)** | Every single value, grouped by topic: Engine · Road and corners · Boost lunge and nose lift · Boost screen, hit-stop, warp · **Landings and hits** · View (banking) · All shaking (head spring) · Race start. |
 | **Saved vehicles** | Every vehicle with values, editable without driving it. |
-| **Saved maps** | Every map with picture values, editable from anywhere. |
+| **Saved tracks** | Every track and weather with picture values, editable from anywhere. |
 | **Hotkeys** | Keyboard keys and controller buttons, one block per action. |
 | **Menu screen positions** | Fix menus where the VR view ends up in a strange place. |
 | **Reset all settings** | Shared settings back to the defaults (press twice). Saved vehicles stay. |
 
 Percent amounts: **100 = recommended, 0 = off, 200 = double.** The small arrow in front of a
 value brings back its default. Light blue text is about what you drive now (vehicle, character,
-map); red marks Ride shake and the follow mode that can make you sick.
+track); red marks Ride shake and the follow mode that can make you sick.
 
 ---
 
@@ -252,6 +268,10 @@ cockpit is kept **per vehicle**, and you never have to press "save".
 
 **How it works**
 
+- **Which vehicle it is**: the model of the part its seat is in — the rear on landspeeders and
+  skim speeders, the controls on speeder bikes, the pod on podracers. Swapping that part in Edit
+  Vehicle changes the seat and the cockpit, so it is another vehicle with its own values;
+  swapping any other part keeps the vehicle. The menu shows the model names the game shows.
 - **While you drive a vehicle**, any vehicle-related value you change — eye position, banking,
   body follow, cut distance, the shake amounts, any fine-tuning value — is **saved at once for
   that vehicle only**. It is marked **`[vehicle]`** in the menu.
@@ -416,26 +436,30 @@ scene-colour fringe) are switched on only while an effect is visible and restore
 Hit-stop uses global time dilation (always restored); the warp pulse scales UEVR's world scale
 (+ = the world briefly shrinks away, − = it rushes at you).
 
-### Brightness per map
+### Brightness per track and weather
 
-Some maps and bright weather look blinding and washed out in VR while the monitor looks fine.
-Values here are saved for the map you are on only (shown in light blue); every other map stays
-as the game shows it. They are written into the game camera's post-process.
+Some tracks and bright weather look blinding and washed out in VR while the monitor looks fine.
+A map has several tracks (forward, reverse, variants) and each race has its own weather and time
+of day, so values here are saved for the track **and** weather you race only (shown in light blue,
+e.g. "Fallen Empire (Jakku) / Day"); every other one stays as the game shows it. They are written
+into the game camera's post-process.
 
 | Value | |
 | --- | --- |
-| Adaptation: ignore the dark part | When the game measures how bright the picture is, it leaves out this share of the darkest pixels. Higher = it brightens less for dark surroundings. |
-| Adaptation: least light it brightens for | Dark places are not brightened beyond this. Raise it slowly if the outside looks blown out while you are in a tunnel. |
-| Brightness (exposure) | The whole picture, in camera stops (−1 = half as bright). |
-| Bright parts | Only the bright parts (sky, sunlit sand, glare). |
+| Brightness | The whole picture, in camera stops (−1 = half as bright). |
 | Bloom | The glow around bright things; in VR it can fog the whole view. |
 | Colour strength (saturation) | How strong the colours are. |
 | Contrast | Difference between dark and bright. |
+| *More:* Tunnels (older): leave out the dark part | When the game measures how bright the picture is, it leaves out this share of the darkest pixels. It only starts to work above about 92. |
+| *More:* Tunnels: brighten no further than | Dark places are not brightened beyond this. Raise it slowly if the outside looks blown out while you are in a tunnel. |
+| *More:* Bright parts (colour gain) | Only the bright parts (sky, sunlit sand, glare); far down they turn grey. |
 
-The outside looking far too bright from inside a tunnel, and fine again once you are out, is
-the game's eye adaptation brightening for the dark inside: the two adaptation values only
-change dark places, Brightness changes everything. **Saved maps** lists every map with values;
-"This map: back to the game's picture" forgets them.
+**VR picture for every track** holds values for every track and weather at once, against the
+headset's paler, brighter look; where a track has its own value, that one is used. The outside
+looking far too bright from inside a tunnel, and fine again once you are out, is the game's eye
+adaptation brightening for the dark inside. **Saved tracks** lists every track and weather with
+values; "This track and weather: back to the game's picture" forgets them, and "Compare: show the
+game's picture" shows the difference while it is ticked.
 
 ### Race start
 
@@ -516,7 +540,8 @@ In the UEVR profile (`%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`):
 | --- | --- |
 | `scripts/swgr_vr_cockpit.lua` | The script. |
 | `data/swgr_vr_settings.json` | Shared settings, hotkeys, shared fine-tuning values you changed. |
-| `data/swgr_vr_vehicles.json` | Per-vehicle values: `eyes`, `feel` (% amounts), `detail` (fine tuning and Ride shake), `pilotFollow` (per character); and `maps` (Brightness per map). Only what you changed. |
+| `data/swgr_vr_vehicles.json` | Per-vehicle values: `eyes`, `feel` (% amounts), `detail` (fine tuning and Ride shake), `pilotFollow` (per character); `maps` (brightness per track and weather); `legacy` / `moved` (values of older vehicle names, while they are carried over). Only what you changed. |
+| `data/swgr_vr_settings_backup_format1.json` | Your settings file as an older version left it, kept once when v2.1.1 first tidied it. |
 | `data/swgr_vr_views.json` | Menu screen positions you saved. |
 | `fonts/NanumGothic-Regular.ttf` | Korean menu font (Korean profile only; Nanum Gothic, SIL Open Font License, `fonts/OFL.txt`). |
 
@@ -532,12 +557,14 @@ src/            the script, in sections (_header, 00_core … 90_menu, _footer),
                 lang_ko.lua = the Korean menu text, added only to the Korean build
 profile/        the UEVR profile files (config, cameras, cvars, user_script, v1.x validation notes)
 profile_ko/     extra files for the Korean profile only (the menu font and its license)
-tests/          run_tests.py + mock.lua: the script against a fake game
+tests/          run_tests.py + mock.lua: the script against a fake game; upgrade, vehicle name and
+                picture tests (see tests/README.md)
 build.py        builds dist/EN|KO/swgr_vr_cockpit.lua; "release" builds the packages
 ```
 
 - `python build.py` → `dist/EN/swgr_vr_cockpit.lua`, `dist/KO/swgr_vr_cockpit.lua`.
-  Each `src/NN_*.lua` is wrapped in `do … end`. The English build contains no Korean at all; the
+  Each `src/NN_*.lua` is wrapped in `do … end`. Picture options still being worked on are in
+  `src/65_picture.lua` but off in this build (`PIC_LAB`, set by `build.py`). The English build contains no Korean at all; the
   Korean build is the same code plus `lang_ko.lua`.
 - `python build.py release [PAK_DIR]` → `release/EN/` and `release/KO/`, each with
   `SWGR-Win64-Shipping.zip` (the profile) and `swgr_vr_cockpit.lua`, and (with `PAK_DIR`) the

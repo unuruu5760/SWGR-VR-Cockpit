@@ -23,7 +23,8 @@ local function class(name)
     return strict('class '..name, {
         name = name,
         get_class_default_object = function(self) return MOCK.cdo end,
-        get_objects_matching = function(self) return {} end,
+        -- (MOCK.noObjectList: UEVR's object list empty, as it was for the game's area boxes in the game)
+        get_objects_matching = function(self) if MOCK.noObjectList then return {} end return (MOCK.objectsOf and MOCK.objectsOf[name]) or {} end,
         get_fname = function() return fname(name) end,
         find_function = function(self, fn) return MOCK.uobjects and MOCK.uobjects['Function '..name:gsub('^Class ', '')..':'..fn] end,
     })
@@ -35,6 +36,24 @@ MOCK.cdo = strict('CDO', {
     GetTimeSeconds = function(self, ctx) return MOCK.gameTime or 0 end,
     GetLocalPlayerSubSystemFromPlayerController = function(self, pc, cls) return MOCK.inputSubsystem end,
     GetGameUserSettings = function(self) return { ControlScheme = MOCK.controlScheme or 0 } end,
+    -- (the engine's list of the world's actors of a class: MOCK.objectsOf; MOCK.noActorList: it gives none)
+    GetAllActorsOfClass = function(self, world, cls, out)
+        assert(type(out) == 'table' and cls and cls.name, 'GetAllActorsOfClass arguments')
+        if MOCK.noActorList then return end
+        for _, o in ipairs((MOCK.objectsOf and MOCK.objectsOf[cls.name]) or {}) do out[#out + 1] = o end
+    end,
+    -- (the lines around the vehicle: all meet something when MOCK.roof is true, MOCK.roof(a, b) decides
+    -- for a place only partly closed; MOCK.roofError: the call fails)
+    LineTraceSingle = function(self, ctx, a, b, ch, complex, ignore, draw, hit, ignoreSelf, c1, c2, time)
+        if MOCK.roofError then error('LineTraceSingle: bad argument') end
+        assert(ctx == MOCK.pawn and type(ignore) == 'table' and ignoreSelf == true and b.Z > a.Z, 'bad roof trace')
+        for _, x in ipairs({ a.X, a.Y, a.Z, b.X, b.Y, b.Z }) do assert(type(x) == 'number' and x == x, 'bad roof trace point') end
+        MOCK.traces = (MOCK.traces or 0) + 1
+        local met = MOCK.roof == true
+        if type(MOCK.roof) == 'function' then met = MOCK.roof(a, b) == true end
+        if met then hit.Distance = math.sqrt((b.X - a.X) ^ 2 + (b.Y - a.Y) ^ 2 + (b.Z - a.Z) ^ 2) / 2 end
+        return met
+    end,
 })
 -- Enhanced Input: the look back action injected = the game looks back this frame
 MOCK.inputSubsystem = { name = 'EnhancedInputLocalPlayerSubsystem' }
@@ -59,6 +78,13 @@ local function newComponent(cls, fields)
     fields._cls = cls
     return strict('component '..cls, fields)
 end
+function MOCK.copy(t)
+    if type(t) ~= 'table' then return t end
+    local c = {}
+    for k, v in pairs(t) do c[k] = MOCK.copy(v) end
+    return c
+end
+MOCK.playerState = { get_address = function() return 'playerstate_local' end }
 function MOCK.makeVehicle(kind, model, className)
     local podLayout, seatParent = MOCK.podLayout, nil   -- (a podracer: seat < pod mesh < free container)
     local v = strict('VehicleState', {
@@ -71,7 +97,9 @@ function MOCK.makeVehicle(kind, model, className)
         EnergyBrakeState = 0, LookBackRequested = false, LandingState = 0, DraftingState = 0, Drifting = false, DriftScale = 0,
         IsWrecked = function() return false end, IsTumbling = function() return false end,
     })
-    local asset = { get_full_name = function() return '/Game/Griffin/Vehicles/'..kind..'s/Customisation/'..model..'/SM_'..model..'_Body' end,
+    -- (its body: the part the seat is in, as in the game: landspeeder / skimmer rear, bike controls, podracer pod)
+    local seatSlot = ({ Car = 'Rear', Skimmer = 'Rear', Bike = 'Controls', Plane = 'Root' })[kind] or 'Rear'
+    local asset = { get_full_name = function() return '/Game/Griffin/Vehicles/'..kind..'s/Customisation/'..model..'/'..seatSlot..'/SM_'..model..'_Body' end,
                     Sockets = { { SocketName = 'PilotSeat' } } }
     local root = { get_full_name = function() return '/Game/Griffin/Vehicles/'..kind..'s/Customisation/'..kind..'/Root/SM_Root' end, Sockets = {} }
     local seatTf = { Rotation = quatT(0, 0, 0.7071, 0.7071), Translation = vec(10, 0, 40) }
@@ -92,6 +120,8 @@ function MOCK.makeVehicle(kind, model, className)
     })
     local custom = newComponent('SceneComponent', {
         _name = 'CustomisationRoot', RelativeLocation = vec(0, 0, 0), RelativeRotation = { Pitch = 0, Yaw = 0, Roll = 0 },
+        -- (the game's recipe: which model each part slot comes from)
+        ActiveRecipe = { RecipeName = model, UnitRecipes = { { UnitName = 'Main', Parts = { { PartType = seatSlot, vehicleKit = model, ParentIndex = -1 } } } } },
         GetAttachParent = function(self) return nil end,
         K2_GetComponentToWorld = function(self) return { Rotation = quatT(0, 0, 0, 1), Translation = vec(1000, 2000, 300) } end,
         K2_SetRelativeLocationAndRotation = function(self, l, r, sweep, hit, tele)
@@ -150,7 +180,7 @@ function MOCK.makeVehicle(kind, model, className)
         VehicleCameraComponent = { camComp },
     }
     local pawn = strict('pawn', {
-        VehicleState = v, InputSource = 1, RootComponent = custom,
+        VehicleState = v, InputSource = 1, RootComponent = custom, CustomisationComponent = custom, PlayerState = MOCK.playerState, CstRootComponent = false,
         TuneComponent = { VehicleConfigData = { PlayerInputData = { Config = { LookBackAction = MOCK.lookBackAction } } } },
         GetGameTimeSinceCreation = function() return MOCK.clockT end,
         get_address = function() return 'pawn_'..model end,
@@ -170,7 +200,13 @@ local function pov() return { Location = vec(0, 0, 0), Rotation = { Pitch = 0, Y
     PostProcessSettings = { ColorSaturation = { X = 1, Y = 1, Z = 1, W = 1 }, ColorContrast = { X = 1, Y = 1, Z = 1, W = 1 },
                             SceneColorTint = { R = 1, G = 1, B = 1, A = 1 }, ColorGainHighlights = { X = 1, Y = 1, Z = 1, W = 1 },
                             AutoExposureBias = 0, BloomIntensity = 0.675, AutoExposureLowPercent = 10,
-                            AutoExposureHighPercent = 90, AutoExposureMinBrightness = -10 }, PostProcessBlendWeight = 1 } end
+                            AutoExposureHighPercent = 90, AutoExposureMinBrightness = -10,
+                            LocalExposureHighlightContrastScale = 1, LocalExposureShadowContrastScale = 1,
+                            ColorOffset = { X = 0, Y = 0, Z = 0, W = 0 }, ColorSaturationHighlights = { X = 1, Y = 1, Z = 1, W = 1 },
+                            ColorSaturationMidtones = { X = 1, Y = 1, Z = 1, W = 1 }, ColorSaturationShadows = { X = 1, Y = 1, Z = 1, W = 1 },
+                            WhiteTemp = 6500, AutoExposureMaxBrightness = 20, ColorGamma = { X = 1, Y = 1, Z = 1, W = 1 },
+                            ColorGammaShadows = { X = 1, Y = 1, Z = 1, W = 1 }, ColorGainShadows = { X = 1, Y = 1, Z = 1, W = 1 },
+                            ColorCorrectionShadowsMax = 0.09, LocalExposureMethod = 0 }, PostProcessBlendWeight = 1 } end
 MOCK.viewTargetClass = 'VBP_Bike_C'
 MOCK.cm = { ViewTarget = { POV = pov(), Target = nil }, CameraCachePrivate = { POV = pov() } }
 MOCK.cm.ViewTarget.Target = {
@@ -186,6 +222,7 @@ uevr = {
     api = strict('api', {
         find_uobject = function(self, name)
             if MOCK.uobjects and MOCK.uobjects[name] then return MOCK.uobjects[name] end
+            if MOCK.noAreaClass and name:find('SweejAmbience', 1, true) then return nil end
             if name:find('^Class ') or name:find('^ScriptStruct ') then
                 classes[name] = classes[name] or class(name)
                 return classes[name]
@@ -195,7 +232,17 @@ uevr = {
         get_local_pawn = function(self, i) return MOCK.pawn end,
         get_player_controller = function(self, i) return MOCK.pc end,
         execute_command = function(self, c) MOCK.commands[#MOCK.commands + 1] = c end,
-        get_engine = function(self) return { NearClipPlane = 10, GameViewport = { World = { get_fname = function() return fname(MOCK.world or 'L_Test_LOOP_A') end } } } end,
+        get_engine = function(self) return { NearClipPlane = 10, GameViewport = { World = { get_fname = function() return fname(MOCK.world or 'L_Test_LOOP_A') end,
+            -- (the race's recipe: its track; the game's name is a text object)
+            -- (the race's recipe per racer: MOCK.racers = { { Player = MOCK.playerState, VehicleCustomisation = recipe } })
+            GameState = { EventRecipeState_Replication = { ActiveStage = 0, Racers = MOCK.racers or {} },
+                -- (the race's view model: its track and planet; the game's names are text objects)
+                -- (MOCK.trackDef false: no track yet)
+                RaceEventViewModel = { track = MOCK.trackDef ~= false and { get_fname = function() return fname(MOCK.trackDef or 'TRAK_MAS_LOOP_A_SHORT_02_HARD') end,
+                        get_class = function() return { get_fname = function() return fname('TrackDef') end } end } or nil,
+                    Planet = { get_fname = function() return fname('PLA_Mastiff') end },
+                    -- (MOCK.condition false: the weather can't be read)
+                    trackConditions = MOCK.condition ~= false and { TagName = fname(MOCK.condition or 'TrackCondition.Sunset') } or nil } } } } } end,
         get_console_manager = function(self) return { find_variable = function(_, n) return { get_int = function() return 0 end } end } end,
     }),
     sdk = { callbacks = strict('callbacks', {
@@ -215,8 +262,9 @@ uevr = {
     },
 }
 json = {
-    load_file = function(name) return MOCK.files[name] end,
-    dump_file = function(name, t) MOCK.files[name] = t; MOCK.saves = (MOCK.saves or 0) + 1 end,
+    -- (like the real one: a file is read into new tables and written as a copy, never shared)
+    load_file = function(name) return MOCK.copy(MOCK.files[name]) end,
+    dump_file = function(name, t) MOCK.files[name] = MOCK.copy(t); MOCK.saves = (MOCK.saves or 0) + 1 end,
 }
 
 -- imgui: 'mode' decides what the widgets return (nothing / click everything)

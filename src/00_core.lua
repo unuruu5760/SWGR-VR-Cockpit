@@ -89,23 +89,12 @@ V.DEFAULTS = {
     bankOtherRoll = 100, bankOtherMax = 50.92, bankOtherAmount = 0.65,
     feelOn = true,                 -- cockpit shake / boost punch
     engine = 100, road = 100, motion = 100, boost = 100, landing = 100,   -- %
-    shakeSaved = 100, shakeDefault = 100,   -- (older versions: one pair for all types, read once into the ones below)
     -- % on top of the shake, per vehicle type: the amounts saved for a vehicle / all others
     shakeDefault_Bike = 100, shakeSaved_Bike = 100, rideDefault_Bike = 100, rideSaved_Bike = 100,
     shakeDefault_Car = 100, shakeSaved_Car = 100, rideDefault_Car = 100, rideSaved_Car = 100,
     shakeDefault_Skimmer = 100, shakeSaved_Skimmer = 100, rideDefault_Skimmer = 100, rideSaved_Skimmer = 100,
     shakeDefault_Plane = 100, shakeSaved_Plane = 100, rideDefault_Plane = 100, rideSaved_Plane = 100,
-    shakeMasterByType = false,
     shakeAlongOn = false,          -- the vehicle body shakes too and carries you along (test)
-    -- (below: older versions' shaking-along amounts, read once into the shared values; now per vehicle)
-    shakeAlongPerVehicle = false,
-    landSlamV2 = false,            -- the landing slam amount got a new meaning (100 = the new design): old values dropped once
-    shakeAlong = 100,              -- % of the trembling the vehicle body takes
-    shakeAlongAir = 50,            -- % of that it keeps while airborne (the sense of speed)
-    shakeAlongSmooth = 0,          -- % its engine / road part is made slower and softer (0 = untouched)
-    shakeAlongSmooth2 = 0,         -- % everything else the body does is made softer (0 = untouched)
-    shakeAlongMove = 100,          -- % of the lunges, sways, bobbing and the landing press it takes
-    shakeAlongLand = 500,          -- % landing slam of the vehicle body (500 was needed to feel it, 2026-10-17)
     hitstop = true, warp = true,
     screen = 100,                  -- % boost screen colours (0 = off)
     intro = true,                  -- engine start shot, then into the cockpit
@@ -118,27 +107,48 @@ V.DEFAULTS = {
     padToggle = 'None', padCycle = 'None', padRecenter = 'None',
     keyExtras = 'F5', padExtras = 'None',
     keyLookBack = 'None', padLookBack = 'Right stick up',   -- look back from the cockpit seat while held
-    blockCamButton = true,         -- cockpit, racing: the game's camera change button (RB, alternative controls: right stick click) is kept from the game (its HUD moves with each camera)
     detail = {},                   -- fine tuning: key -> value (only what the user changed)
+    picBase = {},                  -- picture values for every track and weather (65_picture; a place's own replace them)
+    format = 2,                    -- 2 = 2.1.1: settings of older versions put right, their old keys gone
 }
+-- Settings older versions saved and this one no longer keeps: read once from an older file (V.old) to
+-- carry them over (40_feel), never saved again.
+V.OLD_DEFAULTS = {
+    shakeSaved = 100, shakeDefault = 100,   -- one overall shake pair for all types (now per type)
+    shakeMasterByType = false, shakeAlongPerVehicle = false, landSlamV2 = false,   -- 'done once' marks
+    shakeAlong = 100, shakeAlongAir = 50, shakeAlongSmooth = 0, shakeAlongSmooth2 = 0, shakeAlongMove = 100,
+    shakeAlongLand = 500,                  -- ride shake amounts for every vehicle (now per vehicle)
+    blockCamButton = true,                 -- (now always on)
+}
+V.old = {}
 function V.resetSettings()
     for k, v in pairs(V.DEFAULTS) do V.cfg[k] = (type(v) == 'table') and {} or v end
 end
 V.cfg = {}
 V.resetSettings()
+V.cfgFormat = 2                            -- format of the loaded settings (no file: nothing to put right)
 do
     local ok, t = pcall(json.load_file, V.SETTINGS_FILE)
     if ok and type(t) == 'table' then
+        V.cfgFormat = tonumber(t.format) or 1
+        -- an older file: kept as it is, once, before anything is put right
+        if V.cfgFormat < 2 then
+            local bk = V.SETTINGS_FILE:gsub('%.json$', '_backup_format'..V.cfgFormat..'.json')
+            local okB, had = pcall(json.load_file, bk)
+            if not (okB and type(had) == 'table') then pcall(json.dump_file, bk, t) end
+        end
         for k, v in pairs(t) do
+            if V.OLD_DEFAULTS[k] ~= nil and type(v) == type(V.OLD_DEFAULTS[k]) then V.old[k] = v end
             if V.DEFAULTS[k] ~= nil and type(v) == type(V.DEFAULTS[k]) then
-                if k == 'detail' then
-                    for dk, dv in pairs(v) do if type(dv) == 'number' then V.cfg.detail[dk] = dv end end
+                if k == 'detail' or k == 'picBase' then
+                    for dk, dv in pairs(v) do if type(dv) == 'number' then V.cfg[k][dk] = dv end end
                 else
                     V.cfg[k] = v
                 end
             end
         end
     end
+    V.cfg.format = 2
 end
 
 -------------------------------------------------------------------------------- fine tuning
@@ -248,14 +258,19 @@ function V.pilotBuiltin(m, c, key)
     return type(t) == 'table' and tonumber(t[key]) or nil
 end
 V.VEHICLES_FILE = 'swgr_vr_vehicles.json'
-V.veh = { eyes = {}, feel = {}, detail = {}, pilotFollow = {}, maps = {}, format = 3 }   -- (maps: picture per map)
-V.vehFormat = 3                            -- format of the loaded file (older ones are converted)
+-- maps: picture per map. legacy: the vehicle names that had values when the file came from a version
+-- before 2.1.1 (named the older way), until each is put right (20_vehicle); moved: what older names
+-- had when they were put right, until a vehicle of that name turns up and takes it back.
+-- format 4 = 2.1.1 (vehicles named after their seat part).
+V.veh = { eyes = {}, feel = {}, detail = {}, pilotFollow = {}, maps = {}, legacy = {}, moved = {}, format = 4 }
+V.vehFormat = 4                            -- format of the loaded file (older ones are converted)
 do
     local ok, t = pcall(json.load_file, V.VEHICLES_FILE)
     if ok and type(t) == 'table' then
-        for _, k in ipairs({ 'eyes', 'feel', 'detail', 'pilotFollow', 'maps' }) do
+        for _, k in ipairs({ 'eyes', 'feel', 'detail', 'pilotFollow', 'maps', 'legacy', 'moved' }) do
             if type(t[k]) == 'table' then V.veh[k] = t[k] end
         end
+        for m, v in pairs(V.veh.moved) do if type(v) ~= 'table' then V.veh.moved[m] = nil end end   -- (a test build's marks)
         V.vehFormat = tonumber(t.format) or 1
         if V.vehFormat < 2 then
             -- older files: body follow was kept apart ({ up, forward }; moved into detail by the
@@ -287,8 +302,15 @@ do
         for _, k in ipairs({ 'feel', 'detail' }) do
             for m, tbl in pairs(V.veh[k]) do if type(tbl) ~= 'table' or next(tbl) == nil then V.veh[k][m] = nil end end
         end
+        -- a file from before 2.1.1: remember which names have values (they were named the older way)
+        if V.vehFormat < 4 then
+            for _, k in ipairs({ 'eyes', 'feel', 'detail', 'pilotFollow' }) do
+                for m in pairs(V.veh[k]) do V.veh.legacy[m] = true end
+            end
+        end
     end
 end
+V.veh.format = 4
 local vehSaveAt = nil
 function V.saveVeh() vehSaveAt = V.t + 0.5 end
 function V.saveVehNow()
@@ -296,7 +318,7 @@ function V.saveVehNow()
     local ok, err = pcall(json.dump_file, V.VEHICLES_FILE, V.veh)
     if not ok then log('saving vehicle data failed: '..tostring(err)) end
 end
-if V.vehFormat < 3 or V.vehPruned then V.saveVeh() end
+if V.vehFormat < 4 or V.vehPruned then V.saveVeh() end
 -- one per-vehicle value (kind 'feel' or 'detail'); nil = not changed for that vehicle
 function V.ownVal(kind, m, key)
     local t = m and V.veh[kind][m]

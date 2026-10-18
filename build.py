@@ -14,7 +14,7 @@ do ... end (each section gets its own 200-local budget), then _footer.lua."""
 import glob, os, shutil, sys, zipfile
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-VERSION = '2.1.0'
+VERSION = '2.1.1'
 SCRIPT = 'swgr_vr_cockpit.lua'
 PAK = 'zzz_SWGR_NoBlackBars_P'
 
@@ -22,7 +22,8 @@ PAK = 'zzz_SWGR_NoBlackBars_P'
 def build(lang):
     src = os.path.join(ROOT, 'src')
     parts = [open(os.path.join(src, '_header.lua'), encoding='utf-8').read()
-             .replace('@LANG@', lang).replace('@VERSION@', VERSION)]
+             .replace('@LANG@', lang).replace('@VERSION@', VERSION)
+             .replace('@PIC_LAB@', 'false')]   # (picture options still being worked on: off here)
     if lang == 'ko':                       # Korean menu text (the English build has none)
         body = open(os.path.join(src, 'lang_ko.lua'), encoding='utf-8').read().rstrip('\n')
         parts.append('\n' + '-' * 100 + '\n-- lang_ko.lua\n' + '-' * 100 + '\ndo\n' + body + '\nend\n')

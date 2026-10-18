@@ -248,22 +248,53 @@ local FOLLOW_KEYS = { 'followUp', 'followFwd' }
 for _, k in ipairs({ 'alongTilt', 'shakeAlong', 'shakeAlongMove', 'shakeAlongSmooth', 'shakeAlongSmooth2', 'shakeAlongAir', 'shakeAlongLand' }) do
     if V.TUNE_INDEX[k] then V.TUNE_INDEX[k].noRec = true end
 end
--- picture per map: { key, label, lo, hi, format, description }
+-- picture per track and weather: { key, label, lo, hi, format, description }; the older controls folded
+-- apart (PIC_MORE: kept for the values saved with them)
 local PIC_ROWS = {
-    { 'picLow', 'Adaptation: ignore the dark part', 0, 98, '%.0f',
-      'When the game measures how bright the picture is, it leaves out this share of the darkest pixels (the dark tunnel walls, the cockpit). Higher = it brightens less for dark surroundings, the bright outside stays right. 0 = the game\'s own (Unreal\'s default leaves out 10 of 100). Up to 98: then only the brightest bit counts.' },
-    { 'picMinEV', 'Adaptation: least light it brightens for', 0, 15, '%.1f',
-      'Dark places are not brightened beyond this (camera EV: higher = it stops brightening sooner); bright places are not touched. In a tunnel: raise it slowly until the outside looks right. If the outside in daylight also gets darker, it is too high. 0 = the game\'s own.' },
-    { 'picExp', 'Brightness (exposure)', -3, 1, '%.1f',
-      'The whole picture darker or brighter, in camera stops: -1 = half as bright, -2 = a quarter, +1 = double. Added on top of what the map and its weather set. 0 = as the game does it.' },
-    { 'picHi', 'Bright parts', 30, 150, '%.0f %%',
-      'Only the bright parts of the picture (sky, sunlit sand, glare) darker or brighter; the darker parts stay. For the blown-out look. 100 = as the game does it.' },
+    { 'picExp', 'Brightness', -3, 2, '%.1f',
+      'The whole picture darker or brighter, in camera stops: -1 = half as bright, +1 = double. 0 = as the game does it.', 'Light' },
+    { 'picUncap', 'Keep bright skies from turning white', 0, 1, 'check',
+      'In some places (under the big wrecks) the game does not let the picture get darker than a set level, so the bright sky beyond turns white - a little further on it is fine again. Ticked: that limit is lifted, the game darkens for the sky as it does everywhere else.' },
+    { 'picPair', 'Expose for the bright outside, keep the inside', 0, 100, '%.0f %%',
+      'One slider for the two set by hand: the game brightens dark views less (Tunnels: brighten no further than, here 8 to 15), so the bright outside seen from a tunnel or from under a wreck does not turn white; and the dark tones are lifted back by about as much, so the inside stays near what it was. 0 = off.' },
+    { 'picPairLift', '  Inside lifted back with it', 0, 200, '%.0f %%',
+      'How much the dark parts are lifted back with it: 100 = about as much as they were darkened, more = brighter inside, less = darker. The game\'s own brightening can\'t be read, so it is near, not exact.' },
+    { 'picPairCap', '  Lamps, deep dark: not lifted too far', 0, 1, 'check',
+      'Lifting back goes no further than what the game\'s brightening was held back by. Without it the darkest parts are lifted the most (a lamp\'s soft light in a dark tunnel, deep shadows), past the game\'s own picture. Works on the part lifted by brightness (Keep the inside\'s contrast below 100).' },
+    { 'picFusion', '  Lift by blending two pictures (Fusion)', 0, 1, 'check',
+      'The engine\'s other way of lifting by the area around (for Keep the inside\'s contrast, Lift dark places, Tunnels and glare): it makes a darker and a brighter picture and takes each part from the one where it is neither too bright nor too dark, so a lamp too bright in the brighter one is taken from the darker one. New in the engine, not tried in this game: if it looks wrong, untick.' },
+    { 'picPairKeep', '  Keep the inside\'s contrast', 0, 100, '%.0f %%',
+      'How the inside is lifted back: 0 = each part by its own brightness (the inside looks flatter), 100 = by the area around it (the inside keeps its contrast, the way it was before). The soft glow around lamps grows either way: lifting the dark while keeping the bright down brightens the lamp\'s fading light too.' },
+    { 'picTunnel', 'Tunnels: less glare from outside', 0, 200, '%.0f %%',
+      'Only in tunnels (the game\'s own narrow indoor areas): the bright outside seen from inside is toned down, the inside stays as it is. Out in the open, or under a big roof open at the sides: the game\'s own picture. 100 = strong, 200 = the most there is. 0 = off.' },
+    { 'picGlare', 'Tone down glaring places (everywhere)', 0, 200, '%.0f %%',
+      'Everywhere, out in the open too: only the very bright places (sky, sunlit sand) get darker. A sunny day can look overcast with it; for tunnels alone use Tunnels. 100 = strong, 200 = the most there is. 0 = as the game does it.' },
+    { 'picShadow', 'Lift dark places', 0, 100, '%.0f %%',
+      'Only the dark places (shadows, night, the cockpit) get brighter; the bright ones stay. 0 = as the game does it.' },
+    { 'picBlack', 'Deeper blacks', 0, 300, '%.0f %%',
+      'Takes off the grey haze: the darkest parts go black, the bright ones stay (like ReShade\'s Levels). Against the headset\'s washed-out look. 0 = as the game does it.', 'Colour' },
+    { 'picVib', 'Vibrance', 0, 100, '%.0f %%',
+      'More colour in the washed-out parts (sky, sunlit sand). The engine can only raise colour by brightness, not by how pale a colour is, so bright lights (lamps, candles) get stronger too - keep it moderate. 0 = as the game does it.' },
+    { 'picTemp', 'Colour temperature', -250, 250, '%.0f',
+      'Minus = cooler (bluer), plus = warmer (yellower). 0 = as the game does it.' },
     { 'picBloom', 'Bloom (glow around bright things)', 0, 200, '%.0f %%',
       'The glow that spreads around bright things. In VR it can fog the whole view. 0 = no glow, 100 = as the game does it.' },
     { 'picSat', 'Colour strength (saturation)', 50, 200, '%.0f %%',
       'How strong the colours are. Above 100 = stronger colours. 100 = as the game does it.' },
     { 'picCon', 'Contrast', 50, 150, '%.0f %%',
       'Difference between dark and bright. Above 100 = darker darks, brighter brights. 100 = as the game does it.' },
+    { 'picLampCard', 'Round glow card by lamps', 0, 100, '%.0f %%',
+      'The soft round glow card the game puts by its standing lamps, as bright as set here. 100 = as the game does it, 0 = none. Set on the lamp itself, so the game keeps it.', 'Lamps' },
+    { 'picLampAir', 'Lamp light in the air', 0, 100, '%.0f %%',
+      'How much each lamp\'s light shows in the air around it (the fog it lights; these lamps have it strong). 100 = as the game does it, 0 = none. Set on the lamp itself, so the game keeps it.' },
+}
+local PIC_MORE = {
+    { 'picLow', 'Tunnels (older): leave out the dark part', 0, 98, '%.0f',
+      'The older tunnel control: it only starts to work above about 92. 0 = as the game does it.' },
+    { 'picMinEV', 'Tunnels: brighten no further than', 0, 15, '%.1f',
+      'Dark places are not brightened beyond this (camera EV: higher = it stops sooner); bright places are not touched. If the outside in daylight also gets darker, it is too high. 0 = as the game does it.' },
+    { 'picHi', 'Bright parts (colour gain)', 30, 150, '%.0f %%',
+      'The older way to darken bright parts: it multiplies their colour, so far down they turn grey. Tone down glaring places does it better. 100 = as the game does it.' },
 }
 -- the shake master amounts are per vehicle type; the type they show (the one driven, else picked)
 local MASTER_TYPES = { { 'Bike', 'Bike' }, { 'Car', 'Landspeeder' }, { 'Skimmer', 'Skimmer' }, { 'Plane', 'Podracer' } }
@@ -329,16 +360,62 @@ local function followSlider(item, m, c, id, label)
     return own ~= nil
 end
 -- a % amount of vehicle m (banking or a shake group: { key, en, tipEn }); true if own
--- a picture value of map m (nil = no map: greyed out); saved for that map, light blue when it has one
+-- a picture value of place m (nil = none yet: greyed out); saved for that place, light blue when it has one
+-- (m = '*': the value for every track and weather; a place's own one goes back to that one)
 local function picSlider(m, r, idp)
     local key, fmt = r[1], r[5]
-    local neutral = V.PIC_NEUTRAL[key]
-    local own = m and V.picOwn(key, m)
     local f = fmt == '%.1f' and '%.1f' or '%.0f'
-    local reset = own and { fn = function() V.setPicVal(m, key, neutral) end, def = string.format(f, neutral) }
-    local c, v = slider(tr(r[2])..'##'..idp..key, V.picVal(key, m or '?'), r[3], r[4], fmt, reset, own and COL.own)
+    local own, value, back, set
+    if m == '*' then
+        own, value, back = V.picBaseOwn(key), V.picBase(key), V.PIC_NEUTRAL[key]
+        set = function(x) V.setPicBase(key, x) end
+    else
+        own, value, back = m and V.picOwn(key, m), V.picVal(key, m or '?'), V.picBase(key)
+        set = function(x) if m then V.setPicVal(m, key, x) end end
+    end
+    if fmt == 'check' then
+        -- (an on / off value: 1 / 0)
+        local c, v = checkbox(tr(r[2]), value > 0.5, idp..key, r[6], own and COL.own)
+        if c then set(v and 1 or 0) end
+        return
+    end
+    local reset = own and { fn = function() set(back) end, def = string.format(f, back) }
+    local c, v = slider(tr(r[2])..'##'..idp..key, value, r[3], r[4], fmt, reset, own and COL.own)
     tip(r[6])
-    if c and m then V.setPicVal(m, key, fmt == '%.1f' and math.floor(v * 10 + 0.5) / 10 or round(v)) end
+    if c then set(fmt == '%.1f' and math.floor(v * 10 + 0.5) / 10 or round(v)) end
+end
+-- every picture slider of place m, the older controls folded below (open-coloured when one is in use)
+local function picRows(m, idp)
+    local group = nil
+    for _, r in ipairs(PIC_ROWS) do
+        group = r[7] or group
+        -- (a public build leaves out the options still being worked on; a group's name goes with its first row shown)
+        local shown = V.PIC_LAB or not V.PIC_LAB_KEYS[r[1]]
+        if shown and group then colorText(tr(group), COL.info); group = nil end   -- (Light, Colour)
+        if shown then picSlider(m, r, idp) end
+        -- (Tunnels on the place raced now: whether you are closed in right now)
+        if shown and r[1] == 'picTunnel' and m and m ~= '*' and m == V.picPlace() and V.picVal('picTunnel', m) > 0.5 then
+            local hit, d = V.picRoof()
+            colorText('    '..(hit == nil and tr('The game\'s areas could not be read on this map: no Tunnels here (see the log)')
+                or hit and tr('Now: in a tunnel (Tunnels on)') or tr('Now: not in a tunnel')), COL.info)
+            if hit ~= nil then
+                -- (the game's area the vehicle is in: indoor / outdoor, how wide, its name)
+                local short = d and d.name:gsub('^SAD_%a+_Tracks_', ''):gsub('^SAD_', '') or nil
+                colorText('    '..(not d and tr('Game area: none (outdoors)')
+                    or d.skipped and string.format(tr('Game area: named open by the game, left out (%s)'), short)
+                    or not d.interior and string.format(tr('Game area: outdoors (%s)'), short)
+                    or d.narrow <= V.AREA_WIDE_M * 100 and string.format(tr('Game area: indoors, %d m across (%s)'), math.floor(d.narrow / 100 + 0.5), short)
+                    or string.format(tr('Game area: indoors, over %d m across (%s)'), V.AREA_WIDE_M, short)), COL.info)
+            end
+        end
+    end
+    local used = false
+    for _, r in ipairs(PIC_MORE) do if m and V.picOwn(r[1], m) then used = true end end
+    if section(tr('More (older controls)')..(used and tr('  (in use)') or ''), idp..'more',
+        'Older ways to tame tunnels and bright parts; kept for the values saved with them.', used and COL.own or nil) then
+        for _, r in ipairs(PIC_MORE) do picSlider(m, r, idp) end
+        imgui.tree_pop()
+    end
 end
 local function pctOwnSlider(p, m, id)
     local own = V.ownVal('feel', m, p[1])
@@ -433,8 +510,8 @@ local function drawMenu()
     if V.model then
         colorText(string.format(tr('Vehicle: %s (%s)'), V.modelLabel(V.model), typeName(V.vtype))
             ..string.format(tr('   Character: %s'), V.pilotLabel(V.pilot)), COL.own)
-        tip('The vehicle you are driving now (type / model).')
-        help(string.format(tr('-> What you change now (eye position, banking, body follow, cut distance, shake, fine tuning) is saved for %s only. What you don\'t touch keeps its default.'), V.model))
+        tip('The vehicle you are driving now: its type and the model of the part your seat is in (landspeeder and skim speeder: the rear, speeder bike: the controls, podracer: the pod). Values are saved by that part: swap it in Edit Vehicle and the vehicle has its own values; swap any other part and they stay.')
+        help(string.format(tr('-> What you change now (eye position, banking, body follow, cut distance, shake, fine tuning) is saved for %s only. What you don\'t touch keeps its default.'), V.modelLabel(V.model)))
     else
         help('-> No vehicle: the vehicle settings (eye position, banking, body follow, cut distance, shake, fine tuning) only show the defaults and can\'t be changed. Get into a vehicle to change them for it, or change a saved vehicle in "Saved vehicles" at the bottom.')
     end
@@ -608,17 +685,40 @@ local function drawMenu()
         imgui.tree_pop()
     end
 
-    -- picture per map ----------------------------------------------------------------------------
-    if section(tr('Brightness per map'), 'picture',
-        'For maps that look too bright in VR. What you change here is saved for the map you are on only; the other maps stay as the game shows them.', COL.test) then
-        local map = V.picMapName()
-        colorText(string.format(tr('Map now: %s'), V.mapLabel(map)), COL.own)
-        help('For a map that looks too bright in VR: what you change here is saved for this map only. Too bright outside while you are inside a tunnel or a building, fine again once out: that is the game\'s eye adaptation brightening for the dark inside - the two adaptation sliders only change dark places; Brightness changes everything.')
-        local dis = not map and disabledBegin()
-        for _, r in ipairs(PIC_ROWS) do picSlider(map, r, 'pic') end
+    -- the picture everywhere ------------------------------------------------------------------------
+    local baseUsed = next(V.cfg.picBase or {}) ~= nil
+    if section(tr('VR picture for every track'), 'picBase',
+        'Picture values for every track and weather at once, against the headset\'s paler, brighter look. A track\'s own values (Brightness per track and weather) replace these there.', baseUsed and COL.own or COL.test) then
+        help('Every track and weather starts from these. Where you set a track\'s own value (light blue there), that one is used instead.')
+        picRows('*', 'pb')
+        if baseUsed and button(tr('Every track: back to the game\'s picture'), 'picBaseReset',
+            'Forgets these values: every track looks as the game shows it again (a track\'s own values stay).') then V.clearPicBase() end
+        imgui.tree_pop()
+    end
+
+    -- picture per track and weather --------------------------------------------------------------
+    if section(tr('Brightness per track and weather'), 'picture',
+        'For tracks that look too bright (or too dark) in VR. What you change here is saved for the track you are racing, in the weather it has now, only; every other track and weather stays as the game shows it.', COL.test) then
+        local place = V.picPlace()
+        colorText(string.format(tr('Now: %s'), place and V.mapLabel(place) or tr('reading the race...')), COL.own)
+        if V.picWholeMap(place) then tip(tr('The track or its weather could not be read here: saved for the whole map.')) end
+        help(V.PIC_LAB and 'Saved for this track in this weather only (another weather, or the track reversed, has its own). The outside turns white inside tunnels: Tunnels. Sky or sand too glaring out in the open: Tone down glaring places. Too dark (night): Lift dark places, or Brightness.'
+            or 'Saved for this track in this weather only (another weather, or the track reversed, has its own).')
+        local dis = not place and disabledBegin()
+        picRows(place, 'pic')
+        if V.PIC_LAB and button(tr('Starting point against glare'), 'picRec',
+            'Puts in for this track and weather: tunnels 100, bloom 70. Adjust from there.') and place then
+            V.setPicVal(place, 'picTunnel', 100); V.setPicVal(place, 'picBloom', 70)
+        end
         disabledEnd(dis)
-        if map and V.veh.maps[map] and button(tr('This map: back to the game\'s picture'), 'picReset',
-            'Forgets the picture values saved for this map: it looks as the game shows it again.') then V.clearPicMap(map) end
+        if place and V.veh.maps[place] then
+            V.picCompareSeen = V.t
+            local cc, cv = checkbox(tr('Compare: show the game\'s picture'), V.picCompare == true, 'picCompare',
+                'While ticked, your values here are left out, to see the difference. Not saved; it switches off when the menu closes.')
+            if cc then V.picCompare = cv end
+        end
+        if place and V.veh.maps[place] and button(tr('This track and weather: back to the game\'s picture'), 'picReset',
+            'Forgets the picture values saved for this track in this weather: it looks as the game shows it again.') then V.clearPicMap(place) end
         imgui.tree_pop()
     end
 
@@ -638,7 +738,7 @@ local function drawMenu()
         'For people who want to go deeper: every single value behind the simple settings above. You don\'t need this.') then
         help('Every single value. The amounts in "Cockpit shake" and "Banking" are applied on top of these (they multiply). 0 turns an effect off. Hover for details and the recommended value.')
         if V.model then
-            help(string.format(tr('Driving %s: a value you change is saved for this vehicle only ("[vehicle]"); the others keep their defaults.'), V.model))
+            help(string.format(tr('Driving %s: a value you change is saved for this vehicle only ("[vehicle]"); the others keep their defaults.'), V.modelLabel(V.model)))
         end
         tuneTree(V.model, 'fine_')
         imgui.tree_pop()
@@ -655,7 +755,7 @@ local function drawMenu()
         'Every vehicle with something saved. Open one to see and change all its values without driving it: untouched values keep their defaults, a value you touch is saved for that vehicle.') then
         local AX = { { 'Sideways (cm)', -160, 160 }, { 'Forward / back (cm)', -200, 200 }, { 'Up / down (cm)', -100, 250 } }
         for _, name in ipairs(names) do
-            if section(name..(name == V.model and tr('  (driving now)') or ''), 'veh'..name) then
+            if section(typeName(V.typeOf(name))..' / '..V.modelLabel(name)..(name == V.model and tr('  (driving now)') or ''), 'veh'..name) then
                 local e, ownEye = V.eyeFor(name)
                 imgui.text(ownEye and tr('Eye position (saved for this vehicle):') or tr('Eye position (default):'))
                 local de = V.defaultEyeFor(name)
@@ -753,21 +853,23 @@ local function drawMenu()
         imgui.tree_pop()
     end
 
-    -- saved maps (picture per map) ---------------------------------------------------------------
+    -- saved tracks (picture per track and weather) -----------------------------------------------
     local maps = {}
     for m in pairs(V.veh.maps) do maps[#maps + 1] = m end
     table.sort(maps)
-    if section(string.format(tr('Saved maps (%d)'), #maps), 'maps',
-        'Every map with its own picture values (Brightness per map). Open one to see and change them, or forget them.') then
+    if section(string.format(tr('Saved tracks (%d)'), #maps), 'maps',
+        'Every track and weather with its own picture values (Brightness per track and weather). Open one to see and change them, or forget them.') then
+        local here = V.picPlace()
         for _, m in ipairs(maps) do
-            if section(V.mapLabel(m)..(m == V.picMapName() and tr('  (here now)') or ''), 'map'..m) then
-                for _, r in ipairs(PIC_ROWS) do picSlider(m, r, 'pm'..m) end
-                if button(tr('Forget this map\'s values'), 'mapdel'..m,
-                    'Forgets the picture values saved for this map: it looks as the game shows it again.') then V.clearPicMap(m) end
+            local label = V.mapLabel(m)..(V.picWholeMap(m) and tr('  (whole map, older version)') or '')
+            if section(label..(m == here and tr('  (here now)') or ''), 'map'..m) then
+                picRows(m, 'pm'..m)
+                if button(tr('Forget these values'), 'mapdel'..m,
+                    'Forgets the picture values saved here: it looks as the game shows it again.') then V.clearPicMap(m) end
                 imgui.tree_pop()
             end
         end
-        if #maps == 0 then imgui.text(tr('  (none yet - change something in Brightness per map)')) end
+        if #maps == 0 then imgui.text(tr('  (none yet - change something in Brightness per track and weather)')) end
         imgui.tree_pop()
     end
 
