@@ -127,10 +127,11 @@ Full list: [CHANGELOG.md](CHANGELOG.md).
 
 - STAR WARS Galactic Racer (PC).
 - UEVR with **joeyhodge's latest backend**:
-  [`101726-gow-e-day-poc-p1`](https://github.com/joeyhodge/UEVR/releases/tag/101726-gow-e-day-poc-p1)
+  [`102026warpspeedinjection+swzcp2+e-day`](https://github.com/joeyhodge/UEVR/releases/tag/102026warpspeedinjection%2Bswzcp2%2Be-day)
   (all of joeyhodge's builds: [joeyhodge/UEVR releases](https://github.com/joeyhodge/UEVR/releases)).
-  Replace `UEVRBackend.dll` in your UEVR folder with the one from that release. UEVR and the game
-  are not included here.
+  Replace `UEVRBackend.dll` in your UEVR folder with the `UEVRBackend.dll` from that release (not
+  the `DIBR` one). It includes a fix for the head tracking that sometimes went wrong right after
+  injecting. UEVR and the game are not included here.
 
 ### 1. The profile (recommended)
 
@@ -505,6 +506,11 @@ Never used in races.
   how the CPU hands draw commands to the GPU (fewer, larger batches), not what you see. It can
   steady the frame rate a little when the CPU is the bottleneck; on a fast CPU there may be no
   difference at all. If anything seems off, delete those two lines.
+- **Right after injecting, the world follows your head or keeps snapping back?** That was the
+  backend picking the wrong place to send the head pose (log: `Rejected unsafe new RHI-command
+  candidate`). joeyhodge's backend
+  [`102026warpspeedinjection+swzcp2+e-day`](https://github.com/joeyhodge/UEVR/releases/tag/102026warpspeedinjection%2Bswzcp2%2Be-day) includes a fix; with an older one,
+  restart the game and inject again.
 - **Not every vehicle and character has been tested.** See the note in
   [Per-vehicle settings](#per-vehicle-settings-and-auto-save).
 - Values in the Korean and English builds are the same; only the menu language differs.

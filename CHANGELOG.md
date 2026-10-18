@@ -47,6 +47,11 @@ your settings stay (see "Your values" below).
 **Docs**
 - HDR: keep `r.AllowHDR 0` and `r.HDR.EnableHDROutput 0` (the first v2.1.0 notes said 1, which
   was wrong).
+- Requirements: joeyhodge's newer backend
+  [`102026warpspeedinjection+swzcp2+e-day`](https://github.com/joeyhodge/UEVR/releases/tag/102026warpspeedinjection%2Bswzcp2%2Be-day)
+  (`UEVRBackend.dll`, not the `DIBR` one). It includes a fix for the head tracking that sometimes
+  went wrong right after injecting (the world following your head; log: `Rejected unsafe new
+  RHI-command candidate`).
 
 # v2.1.0 — 17 October 2026
 

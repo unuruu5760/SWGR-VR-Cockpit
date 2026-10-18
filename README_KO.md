@@ -121,10 +121,11 @@ joeyhodge의 최신 백엔드가 필요해요 ([필요한 것](#필요한-것) �
 
 - STAR WARS Galactic Racer (PC)
 - **joeyhodge의 최신 백엔드**가 들어간 UEVR:
-  [`101726-gow-e-day-poc-p1`](https://github.com/joeyhodge/UEVR/releases/tag/101726-gow-e-day-poc-p1)
+  [`102026warpspeedinjection+swzcp2+e-day`](https://github.com/joeyhodge/UEVR/releases/tag/102026warpspeedinjection%2Bswzcp2%2Be-day)
   (joeyhodge의 전체 빌드: [joeyhodge/UEVR 릴리스](https://github.com/joeyhodge/UEVR/releases)).
-  그 릴리스의 `UEVRBackend.dll`로 UEVR 폴더의 같은 파일을 바꾸세요. UEVR과 게임은 여기에 들어
-  있지 않아요.
+  그 릴리스의 `UEVRBackend.dll`(이름에 `DIBR`이 붙은 것 말고)로 UEVR 폴더의 같은 파일을 바꾸세요.
+  주입 직후 가끔 시야가 머리를 이상하게 따라오던 문제를 고치는 수정이 들어 있어요. UEVR과 게임은
+  여기에 들어 있지 않아요.
 
 ### 1. 프로필 (추천)
 
@@ -476,6 +477,10 @@ Northropi, Merlin, Rook, Saker. 나머지 차량은 원작 콕핏의 기본 눈 
   CPU가 그래픽카드에 그리기 명령을 넘기는 방식(잘게 나누지 않고 묶어서)만 바꾸고, 화면은
   그대로예요. CPU가 병목일 때 프레임이 조금 안정될 수 있고, 고성능 CPU에서는 차이가 거의
   없을 수 있어요. 뭔가 이상하면 이 두 줄을 지우세요.
+- **주입 직후 세상이 머리를 따라오거나 자꾸 제자리로 튀나요?** 백엔드가 머리 위치를 보낼 곳을 잘못
+  잡은 경우예요 (로그: `Rejected unsafe new RHI-command candidate`). joeyhodge의 백엔드
+  [`102026warpspeedinjection+swzcp2+e-day`](https://github.com/joeyhodge/UEVR/releases/tag/102026warpspeedinjection%2Bswzcp2%2Be-day)에 고치는 수정이 들어 있어요.
+  그보다 예전 백엔드라면 게임을 껐다 켜고 다시 주입하세요.
 - **모든 차량·캐릭터를 시험하진 못했어요.** [차량별 설정](#차량별-설정과-자동-저장)의 안내를
   보세요.
 - 한국어판과 영어판은 메뉴 언어만 다르고 값은 같아요.
