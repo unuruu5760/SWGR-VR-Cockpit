@@ -34,7 +34,7 @@ Nanum Gothic by Naver (SIL Open Font License 1.1).
 - [What's new in v2.1.1](#whats-new-in-v211)
 - [What's new in v2.1.0](#whats-new-in-v210)
 - [What's new in v2.0.0](#whats-new-in-v200)
-- [Install](#install)
+- [Install and remove](#install-and-remove)
 - [Pak mod](#pak-mod)
 - [Controls](#controls)
 - [The menu](#the-menu)
@@ -78,7 +78,7 @@ Nanum Gothic by Naver (SIL Open Font License 1.1).
 - A tidier menu: a reset arrow on every value, no more cut-off labels, colours, numbered follow
   modes, real vehicle and character names.
 
-Needs joeyhodge's latest backend (see [Requirements](#requirements)). Details:
+Needs joeyhodge's latest backend (see [Install and remove](#install-and-remove)). Details:
 [CHANGELOG.md](CHANGELOG.md).
 
 ## What's new in v2.0.0
@@ -121,65 +121,114 @@ Full list: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-## Install
+## Install and remove
 
-### Requirements
+This mod goes into **three different places**. If you get confused, start with this table.
 
-- STAR WARS Galactic Racer (PC).
-- UEVR with **joeyhodge's latest backend**:
+| | What | Where it goes | |
+| --- | --- | --- | --- |
+| ① | UEVR backend `UEVRBackend.dll` (joeyhodge's) | **UEVR folder** (the folder with `UEVRInjector.exe`) | required |
+| ② | Cockpit profile `SWGR-Win64-Shipping.zip` (contains the script `swgr_vr_cockpit.lua`) | **UEVR profile folder** `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` | required |
+| ③ | No-black-bars pak `SWGR-NoBlackBars-pak-v2.1.1.zip` (3 files) | **Game folder**, in `Griffin\Content\Paks\~mods\` | optional |
+
+- The script (`.lua`) does **not** go into the game folder. The pak files do **not** go into the profile
+  folder.
+- Get ② and ③ from the release for your menu language: English menu
+  [**v2.1.1**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.1), Korean menu
+  [**v2.1.1-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.1-ko). The pak zip is the same
+  in both.
+- ① is in joeyhodge's
   [`102026warpspeedinjection+swzcp2+e-day`](https://github.com/joeyhodge/UEVR/releases/tag/102026warpspeedinjection%2Bswzcp2%2Be-day)
-  (all of joeyhodge's builds: [joeyhodge/UEVR releases](https://github.com/joeyhodge/UEVR/releases)).
-  Replace `UEVRBackend.dll` in your UEVR folder with the `UEVRBackend.dll` from that release (not
-  the `DIBR` one). It includes a fix for the head tracking that sometimes went wrong right after
-  injecting. UEVR and the game are not included here.
+  release (all of joeyhodge's builds: [joeyhodge/UEVR releases](https://github.com/joeyhodge/UEVR/releases)).
+  It fixes the head tracking that sometimes went wrong right after injecting.
+- The game (PC) and UEVR are not included here.
 
-### 1. The profile (recommended)
+### Finding the folders
 
-Each language has its own release with a file named **`SWGR-Win64-Shipping.zip`** — the name
-UEVR needs, so there is nothing to rename:
+- **UEVR folder**: where you extracted UEVR. It has `UEVRInjector.exe` in it.
+- **UEVR profile folder**: press **Open Global Dir** in the UEVR injector window, or press `Win + R`, paste
+  `%APPDATA%\UnrealVRMod` and press Enter. It is the **`SWGR-Win64-Shipping`** folder in there. Not there yet?
+  Inject UEVR into the game once and it is created.
+- **Game folder**: in your Steam library right-click the game → **Manage → Browse local files**. Usually
+  `C:\Program Files (x86)\Steam\steamapps\common\STAR WARS Galactic Racer\`. The pak goes into
+  `Griffin\Content\Paks\~mods\` in there. No `~mods` folder inside `Paks`? Create it (exactly `~mods`, with the
+  tilde).
 
-- English menu: [**v2.1.1**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.1)
-- Korean menu: [**v2.1.1-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.1-ko)
+### New install
 
-1. Close the game, **back up** your current profile folder
-   `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` (copy it somewhere else) and then **delete it**.
-   Importing on top of an old profile keeps its old scripts (`swgr_cockpit_camera.lua`,
-   `swgr_stable_camera.lua`, other `swgr_cockpit_*.lua`), and they fight with this one.
-2. Import **`SWGR-Win64-Shipping.zip`** with UEVR's **Import Config** as it is, or extract its
-   contents into a new `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`. Folders such as `data` are
-   created by UEVR and the script when needed.
-3. Start the game and inject UEVR. The script runs by itself; its menu is in
-   **UEVR menu (Insert) → Script UI → STAR WARS Galactic Racer VR**.
+Do this with **the game closed**.
 
-The profile contains the UEVR settings, `user_script.txt` and the cvars of the v1.2.0 profile
-with Nero's stereo-mismatch fixes, plus the script.
+1. **① Backend**: replace the `UEVRBackend.dll` in your UEVR folder with the downloaded one (not the one with
+   `DIBR` in its name). Copy the original somewhere first if you want to go back later.
+2. **② Profile**
+   1. If a `SWGR-Win64-Shipping` profile folder already exists, **copy it somewhere as a backup**, then
+      **delete the folder**. Putting the new profile on top of an old one keeps the old scripts, and they fight
+      with this one.
+   2. Put it in one of two ways:
+      - **A. Import with the injector (easy)**: press **Import Profile** in the UEVR injector window and pick the
+        downloaded `SWGR-Win64-Shipping.zip` as it is. Don't extract it and don't rename it.
+      - **B. By hand**: open the zip and put **everything in it** (the `scripts` folder, `config.txt` and so on)
+        **directly into** `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`.
+   3. **Check**: the file `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\scripts\swgr_vr_cockpit.lua` must exist. If you
+      got **a second folder of the same name** inside, like `SWGR-Win64-Shipping\SWGR-Win64-Shipping\scripts`, move
+      the contents of the inner folder one level up. (Windows' "Extract All" adds a folder named after the zip.)
+3. **③ Pak (optional)**: the pak zip has 3 files (`zzz_SWGR_NoBlackBars_P.pak`, `.ucas`, `.utoc`) inside
+   `Griffin\Content\Paks\~mods\`. **Copy these 3 files into the game's `Griffin\Content\Paks\~mods\`.** (Pasting the
+   zip's `Griffin` folder onto the top of the game folder puts them in the same place.) The game's own files are
+   not touched.
+4. Start the game and inject UEVR. **Check**: **UEVR menu (Insert key) → Script UI** shows
+   **STAR WARS Galactic Racer VR** (Korean build: 스타워즈 갤럭틱 레이서 VR). Then it works.
 
-### 2. Script only
+The profile contains the UEVR settings, `user_script.txt` and the cvars of the v1.2.0 profile (with Nero's
+stereo-mismatch fixes), plus the script.
 
-Already have a working profile? Download **`swgr_vr_cockpit.lua`** from the release of your
-language, put it in the profile's `scripts` folder and remove the older cockpit scripts there
-(`swgr_cockpit_*.lua`, `swgr_stable_camera.lua`) — they fight with this one. For the Korean
-menu also copy the `fonts` folder from the Korean `SWGR-Win64-Shipping.zip` into the profile
-(UEVR loads menu fonts only from there; without it the Korean text shows as `?`).
-For Nero's stereo-mismatch fixes, see [Known issues and notes](#known-issues-and-notes).
+**Want to keep your own working profile?** Instead of step 2, download just `swgr_vr_cockpit.lua` from the
+release, put it in the profile's `scripts` folder and delete the older cockpit scripts there
+(`swgr_cockpit_*.lua`, `swgr_stable_camera.lua`). For the Korean menu also copy the `fonts` folder from the
+Korean zip into the profile folder (UEVR's menu loads fonts only from there; without it the Korean text shows as
+`?`). For Nero's stereo-mismatch fixes see [Known issues and notes](#known-issues-and-notes).
 
-### 3. Pak mod (optional)
+### Update (from v2.0.0 or later)
 
-**`SWGR-NoBlackBars-pak-v2.1.1.zip`** (in both releases) removes the black bars and panels that
-look bad in VR. See [Pak mod](#pak-mod) right below. It is the same as in v2.0.x.
+1. Close the game.
+2. Overwrite **only one file**, the profile's `scripts\swgr_vr_cockpit.lua`, with the new `swgr_vr_cockpit.lua`
+   from the release. Leave the other profile files as they are.
+3. **Don't delete the `data` folder.** Your settings and per-vehicle values are in it, and the new version
+   carries them over (to the new vehicle names and to brightness per track; see the [CHANGELOG](CHANGELOG.md)).
+4. The pak has been the same since v2.0.0: leave it in.
 
-### Updating from v2.0.x or v2.1.0
+**Coming from v1.2.0 or older** (the old `swgr_cockpit_camera.lua`): do a [new install](#new-install). Since
+v2.0.0 the settings are kept separately and the old `data/swgr-cockpit-options.json` is not read (it starts from
+the built-in defaults). The default hotkeys changed too (F3 / F4 / F5, see [Controls](#controls)).
 
-Replace `scripts/swgr_vr_cockpit.lua` in your profile with the one from the release of your
-language. The other profile files did not change, and your settings in `data` stay (they are
-carried over to the new vehicle names and to brightness per track; see the
-[CHANGELOG](CHANGELOG.md)).
+### Remove
 
-### Updating from v1.2.0
+Do this with **the game closed**. Pick only what you want.
 
-v2.0.0 replaces `swgr_cockpit_camera.lua`. It has its own settings and does not read
-`data/swgr-cockpit-options.json`; it starts from its built-in defaults. The default hotkeys
-changed (F3 / F4 / F5, see below).
+| To | Delete |
+| --- | --- |
+| remove the cockpit script only (keep your settings) | `scripts\swgr_vr_cockpit.lua` in the profile folder |
+| also delete your saved settings | the file above + the files starting with `swgr_vr_` in the profile's `data` folder (+ the `fonts` folder for the Korean build) |
+| remove the pak | **only these 3** in the game's `Griffin\Content\Paks\~mods\`: `zzz_SWGR_NoBlackBars_P.pak`, `.ucas`, `.utoc` (leave other files alone) |
+| reset this game's UEVR settings completely | the whole `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` folder. Put back your own profile backup if you made one. |
+| put the old backend back (optional) | replace `UEVRBackend.dll` in the UEVR folder with the original you backed up |
+
+If, after removing the script, the view hangs in an odd place on the game's menu screens, a UEVR camera offset
+the script set for those screens is still there. Set **UEVR menu → Camera → Camera Offset** back to 0, or reset
+completely as above.
+
+### Troubleshooting
+
+- **"STAR WARS Galactic Racer VR" is not in the menu** → check the path
+  `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\scripts\swgr_vr_cockpit.lua`. Usually there is an extra folder level, or
+  the script was put into the game folder.
+- **The view shakes oddly or moves twice** → old scripts (`swgr_cockpit_*.lua`, `swgr_stable_camera.lua`) are still
+  in the `scripts` folder. Delete them. This mod has only one script, `swgr_vr_cockpit.lua`.
+- **The Korean menu shows `?`** → the `fonts` folder from the Korean zip must be inside the profile folder.
+- **The black bars are still there** → the 3 pak files must be inside `Paks\~mods\`, not directly in `Paks`, and the
+  folder must be named exactly `~mods`.
+- **Changed a file but nothing changed** → restart the game. If you changed the script with the game running,
+  press **Reset scripts** in the UEVR menu.
 
 ---
 
@@ -203,10 +252,9 @@ matter.
 
 - It is separate from the script and the profile: use it with them, without them, or not at all.
   The cockpit works fine without it.
-- Install: extract `SWGR-NoBlackBars-pak-v2.1.1.zip` into the game folder so
-  `zzz_SWGR_NoBlackBars_P.pak`, `.ucas` and `.utoc` end up in
-  `STAR WARS Galactic Racer\Griffin\Content\Paks\~mods\`. The game's own pak files are not touched.
-- Remove: delete those three files.
+- Install and remove: see ③ in [Install and remove](#install-and-remove). The 3 files
+  (`zzz_SWGR_NoBlackBars_P.pak`, `.ucas`, `.utoc`) go into the game's `Griffin\Content\Paks\~mods\`; to remove it,
+  delete just those 3. The game's own pak files are not touched.
 - Made for the October 2026 version of the game. If a game update changes those screens and
   something looks wrong, remove it.
 

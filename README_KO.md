@@ -33,7 +33,7 @@ joeyhodge, elliotttate, madscy, Nero 정말 고맙습니다. 캐릭터 코드명
 - [v2.1.1에서 바뀐 것](#v211에서-바뀐-것)
 - [v2.1.0에서 새로 생긴 것](#v210에서-새로-생긴-것)
 - [v2.0.0에서 새로 생긴 것](#v200에서-새로-생긴-것)
-- [설치](#설치)
+- [설치와 삭제](#설치와-삭제)
 - [pak 모드](#pak-모드)
 - [조작](#조작)
 - [메뉴](#메뉴)
@@ -75,7 +75,7 @@ joeyhodge, elliotttate, madscy, Nero 정말 고맙습니다. 캐릭터 코드명
   게임에 보내지 않아요 (게임 제어 방식에 맞춰서).
 - 메뉴 정리: 모든 값에 되돌리기 화살표, 글씨 안 잘림, 색, 시점 모드 번호, 차량·캐릭터 실제 이름.
 
-joeyhodge의 최신 백엔드가 필요해요 ([필요한 것](#필요한-것) 참고). 자세한 목록:
+joeyhodge의 최신 백엔드가 필요해요 ([설치와 삭제](#설치와-삭제) 참고). 자세한 목록:
 [CHANGELOG.md](CHANGELOG.md)
 
 ## v2.0.0에서 새로 생긴 것
@@ -115,64 +115,111 @@ joeyhodge의 최신 백엔드가 필요해요 ([필요한 것](#필요한-것) �
 
 ---
 
-## 설치
+## 설치와 삭제
 
-### 필요한 것
+이 모드는 **세 군데에 나눠서** 들어가요. 헷갈리면 이 표부터 보세요.
 
-- STAR WARS Galactic Racer (PC)
-- **joeyhodge의 최신 백엔드**가 들어간 UEVR:
+| | 무엇 | 어디에 넣나 | |
+| --- | --- | --- | --- |
+| ① | UEVR 백엔드 `UEVRBackend.dll` (joeyhodge 것) | **UEVR 폴더** (`UEVRInjector.exe`가 있는 폴더) | 필수 |
+| ② | 콕핏 프로필 `SWGR-Win64-Shipping.zip` (스크립트 `swgr_vr_cockpit.lua`가 들어 있어요) | **UEVR 프로필 폴더** `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` | 필수 |
+| ③ | 검은 띠 없애기 pak `SWGR-NoBlackBars-pak-v2.1.1.zip` (파일 3개) | **게임 폴더** 안의 `Griffin\Content\Paks\~mods\` | 선택 |
+
+- 스크립트(`.lua`)는 **게임 폴더에 넣지 않아요.** pak 파일은 **프로필 폴더에 넣지 않아요.**
+- ②와 ③은 메뉴 언어에 맞는 릴리스에서 받으세요. 한글 메뉴는
+  [**v2.1.1-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.1-ko), 영어 메뉴는
+  [**v2.1.1**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.1)이에요. pak zip은 두 릴리스에
+  똑같이 있어요.
+- ①은 joeyhodge의
   [`102026warpspeedinjection+swzcp2+e-day`](https://github.com/joeyhodge/UEVR/releases/tag/102026warpspeedinjection%2Bswzcp2%2Be-day)
-  (joeyhodge의 전체 빌드: [joeyhodge/UEVR 릴리스](https://github.com/joeyhodge/UEVR/releases)).
-  그 릴리스의 `UEVRBackend.dll`(이름에 `DIBR`이 붙은 것 말고)로 UEVR 폴더의 같은 파일을 바꾸세요.
-  주입 직후 가끔 시야가 머리를 이상하게 따라오던 문제를 고치는 수정이 들어 있어요. UEVR과 게임은
-  여기에 들어 있지 않아요.
+  릴리스에 있어요 (joeyhodge의 전체 빌드: [joeyhodge/UEVR 릴리스](https://github.com/joeyhodge/UEVR/releases)).
+  주입 직후 가끔 시야가 머리를 이상하게 따라오던 문제를 고친 버전이에요.
+- 게임(PC)과 UEVR은 여기 들어 있지 않아요.
 
-### 1. 프로필 (추천)
+### 폴더 찾기
 
-언어마다 릴리스가 따로 있고, 파일 이름이 UEVR이 필요로 하는 **`SWGR-Win64-Shipping.zip`** 그대로라
-이름을 바꿀 필요가 없어요:
+- **UEVR 폴더**: UEVR을 받아서 압축을 푼 폴더예요. `UEVRInjector.exe`가 들어 있어요.
+- **UEVR 프로필 폴더**: UEVR 인젝터 창의 **Open Global Dir** 버튼을 누르거나, `Win + R`을 누르고
+  `%APPDATA%\UnrealVRMod`를 붙여 넣은 뒤 Enter. 그 안의 **`SWGR-Win64-Shipping`** 폴더예요. 없으면 게임에
+  UEVR을 한 번 주입하면 생겨요.
+- **게임 폴더**: Steam 라이브러리에서 게임을 오른쪽 클릭 → **관리 → 로컬 파일 보기**. 보통
+  `C:\Program Files (x86)\Steam\steamapps\common\STAR WARS Galactic Racer\`예요. pak은 그 안의
+  `Griffin\Content\Paks\~mods\`에 들어가요. `Paks` 폴더 안에 `~mods` 폴더가 없으면 새로 만드세요 (이름은
+  물결표 `~`까지 정확히 `~mods`).
 
-- 한글 메뉴: [**v2.1.1-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.1-ko)
-- 영어 메뉴: [**v2.1.1**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.1)
+### 새로 설치
 
-1. 게임을 끄고, 지금 프로필 폴더 `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\`를 다른 곳에
-   **백업**(복사)한 다음 **지우세요**. 예전 프로필 위에 그냥 가져오면 예전 스크립트
-   (`swgr_cockpit_camera.lua`, `swgr_stable_camera.lua` 같은 `swgr_cockpit_*.lua`)가 그대로 남아서
-   이 스크립트와 충돌해요.
-2. **`SWGR-Win64-Shipping.zip`**을 UEVR의 **Import Config**로 그대로 가져오거나, zip 안의 내용을
-   새 `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` 폴더에 푸세요. `data` 같은 폴더는 필요할 때
-   UEVR과 스크립트가 알아서 만들어요.
-3. 게임을 켜고 UEVR을 주입하세요. 스크립트는 알아서 돌아가고, 메뉴는
-   **UEVR 메뉴(Insert) → Script UI → 스타워즈 갤럭틱 레이서 VR**에 있어요.
+**게임을 끈 상태**에서 해요.
 
-프로필에는 v1.2.0 프로필의 UEVR 설정·`user_script.txt`·cvars(Nero의 화면 어긋남 수정 포함)와
+1. **① 백엔드**: 받은 `UEVRBackend.dll`(이름에 `DIBR`이 붙은 것 말고)로 UEVR 폴더의 같은 이름 파일을
+   덮어써요. 원래 파일을 다른 곳에 복사해 두면 나중에 되돌릴 수 있어요.
+2. **② 프로필**
+   1. `SWGR-Win64-Shipping` 프로필 폴더가 이미 있으면, 다른 곳에 **복사해서 백업**한 다음 **폴더를
+      지워요.** 그 위에 그냥 넣으면 예전 스크립트가 남아서 충돌해요.
+   2. 둘 중 하나로 넣어요.
+      - **A. 인젝터로 가져오기 (쉬움)**: UEVR 인젝터 창의 **Import Profile** 버튼 → 받은
+        `SWGR-Win64-Shipping.zip`을 그대로 선택. 압축을 풀거나 이름을 바꾸지 마세요.
+      - **B. 직접 넣기**: zip을 열어 **안에 든 것 전부**(`scripts` 폴더, `config.txt` 등)를
+        `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` 폴더 **바로 안**에 넣어요.
+   3. **확인**: `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\scripts\swgr_vr_cockpit.lua` 파일이 있으면 맞아요.
+      `SWGR-Win64-Shipping\SWGR-Win64-Shipping\scripts`처럼 **같은 이름 폴더가 한 겹 더** 생겼으면 잘못 넣은
+      거예요. 안쪽 폴더의 내용을 한 단계 위로 옮기세요. (윈도우의 "압축 풀기"는 zip 이름으로 폴더를 하나 더
+      만들어요.)
+3. **③ pak (선택)**: pak zip을 열면 `Griffin\Content\Paks\~mods\` 안에 파일 3개
+   (`zzz_SWGR_NoBlackBars_P.pak`, `.ucas`, `.utoc`)가 있어요. 이 **3개를 게임의 `Griffin\Content\Paks\~mods\`에
+   복사**하세요. (zip 안의 `Griffin` 폴더를 게임 폴더 맨 위에 통째로 붙여 넣어도 같은 자리로 들어가요.)
+   게임 원래 파일은 건드리지 않아요.
+4. 게임을 켜고 UEVR을 주입해요. **확인**: UEVR 메뉴(Insert 키) → **Script UI**에 **스타워즈 갤럭틱 레이서 VR**
+   (영어판은 STAR WARS Galactic Racer VR)이 보이면 성공이에요.
+
+프로필에는 v1.2.0 프로필의 UEVR 설정, `user_script.txt`, cvars(Nero의 화면 어긋남 수정 포함), 그리고
 스크립트가 들어 있어요.
 
-### 2. 스크립트만
+**이미 잘 되는 내 프로필을 계속 쓰고 싶으면**: 2번 대신 릴리스의 `swgr_vr_cockpit.lua`만 받아서 프로필의
+`scripts` 폴더에 넣고, 거기 있는 예전 콕핏 스크립트(`swgr_cockpit_*.lua`, `swgr_stable_camera.lua`)를
+지우세요. 한글 메뉴를 쓰려면 한국어판 zip 안의 `fonts` 폴더도 프로필 폴더에 복사하세요 (UEVR 메뉴는 그
+폴더의 글꼴만 읽어요. 없으면 한글이 `?`로 나와요). Nero의 화면 어긋남 수정은 [알아둘 점](#알아둘-점)을 보세요.
 
-이미 잘 되는 프로필이 있으면 원하는 언어 릴리스에서 **`swgr_vr_cockpit.lua`**만 받아서
-프로필의 `scripts` 폴더에 넣고, 거기 있는 예전 콕핏 스크립트(`swgr_cockpit_*.lua`,
-`swgr_stable_camera.lua`)를 지우세요. 같이 돌면 충돌해요. 한글 메뉴를 쓰려면 한국어판
-`SWGR-Win64-Shipping.zip` 안의 `fonts` 폴더도 프로필에 복사하세요 (UEVR 메뉴는 그 폴더의 글꼴만
-읽어요. 없으면 한글이 `?`로 나와요). Nero의 화면 어긋남
-수정은 [알아둘 점](#알아둘-점)을 보세요.
+### 업데이트 (v2.0.0 이상에서)
 
-### 3. pak 모드 (선택)
+1. 게임을 꺼요.
+2. 프로필 폴더의 `scripts\swgr_vr_cockpit.lua` **파일 하나만** 릴리스의 새 `swgr_vr_cockpit.lua`로
+   덮어써요. 다른 프로필 파일은 그대로 둬요.
+3. **`data` 폴더는 지우지 마세요.** 내 설정과 차량별 값이 거기 있고, 새 버전이 그대로 이어받아요 (새 차량
+   이름과 트랙별 밝기로 옮겨져요. [CHANGELOG](CHANGELOG.md) 참고).
+4. pak은 v2.0.0부터 같은 파일이라 그대로 두면 돼요.
 
-**`SWGR-NoBlackBars-pak-v2.1.1.zip`**(두 릴리스 모두에 있어요): VR에서 보기 싫은 검은 띠와 판을
-없애요. 바로 아래 [pak 모드](#pak-모드)를 보세요. v2.0.x 때와 같은 파일이에요.
+**v1.2.0 이하(예전 `swgr_cockpit_camera.lua`)에서 올 때**는 위의 [새로 설치](#새로-설치)대로 하세요.
+v2.0.0부터는 설정을 따로 저장해서 예전 `data/swgr-cockpit-options.json`은 읽지 않아요 (내장 기본값으로
+시작해요). 기본 단축키도 바뀌었어요 (F3 / F4 / F5, [조작](#조작) 참고).
 
-### v2.0.x나 v2.1.0에서 올라올 때
+### 삭제
 
-프로필의 `scripts/swgr_vr_cockpit.lua`만 원하는 언어 릴리스의 것으로 바꾸면 돼요. 다른 프로필
-파일은 그대로이고, `data`에 저장된 설정도 그대로 남아요 (새 차량 이름과 트랙별 밝기로 옮겨져요.
-[CHANGELOG](CHANGELOG.md) 참고).
+**게임을 끈 상태**에서 해요. 하고 싶은 것만 골라서 하면 돼요.
 
-### v1.2.0에서 올라올 때
+| 하고 싶은 것 | 지울 것 |
+| --- | --- |
+| 콕핏 스크립트만 빼기 (설정은 남겨 둠) | 프로필 폴더의 `scripts\swgr_vr_cockpit.lua` |
+| 저장된 내 설정까지 지우기 | 위 파일 + 프로필 폴더 `data` 안의 `swgr_vr_`로 시작하는 파일들 (+ 한국어판이면 `fonts` 폴더) |
+| pak 빼기 | 게임의 `Griffin\Content\Paks\~mods\`에서 `zzz_SWGR_NoBlackBars_P.pak`, `.ucas`, `.utoc` **3개만** (다른 파일은 그대로) |
+| 이 게임의 UEVR 설정을 완전히 처음으로 | `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` 폴더 통째로. 설치 전에 백업한 내 프로필이 있으면 그걸 다시 넣으세요. |
+| 백엔드 되돌리기 (선택) | UEVR 폴더의 `UEVRBackend.dll`을 백업해 둔 원래 파일로 바꾸기 |
 
-v2.0.0은 `swgr_cockpit_camera.lua`를 대신해요. 설정은 따로 저장하고
-`data/swgr-cockpit-options.json`은 읽지 않아요 (내장 기본값으로 시작해요). 기본 단축키도
-바뀌었어요 (F3 / F4 / F5, 아래 참고).
+스크립트를 지운 뒤 게임 메뉴 화면에서 시점이 엉뚱한 곳에 떠 있으면, 스크립트가 메뉴 화면용으로 맞춰 둔
+UEVR 카메라 위치가 남은 거예요. UEVR 메뉴 → **Camera → Camera Offset** 값을 0으로 하거나, 위의 "완전히
+처음으로"를 하세요.
+
+### 안 될 때
+
+- **메뉴에 "스타워즈 갤럭틱 레이서 VR"이 없어요** → `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\scripts\swgr_vr_cockpit.lua`
+  경로가 맞는지 보세요. 폴더가 한 겹 더 있거나, 스크립트를 게임 폴더에 넣은 경우가 많아요.
+- **시점이 이상하게 흔들리거나 두 번 움직여요** → `scripts` 폴더에 예전 스크립트(`swgr_cockpit_*.lua`,
+  `swgr_stable_camera.lua`)가 남아 있어요. 지우세요. 이 모드의 스크립트는 `swgr_vr_cockpit.lua` 하나뿐이에요.
+- **한글 메뉴가 `?`로 나와요** → 한국어판 zip의 `fonts` 폴더가 프로필 폴더 안에 있어야 해요.
+- **검은 띠가 그대로예요** → pak 파일 3개가 `Paks` 바로 아래가 아니라 `Paks\~mods\` 안에 있는지, 폴더
+  이름이 정확히 `~mods`인지 보세요.
+- **파일을 바꿨는데 그대로예요** → 게임을 껐다 켜세요. 게임을 켠 채로 스크립트를 바꿨다면 UEVR 메뉴의
+  **Reset scripts**를 누르세요.
 
 ---
 
@@ -192,10 +239,9 @@ v2.0.0은 `swgr_cockpit_camera.lua`를 대신해요. 설정은 따로 저장하�
 **알아둘 점**
 
 - 스크립트·프로필과는 따로예요. 같이 써도, 이것만 써도, 안 써도 돼요. 없어도 콕핏은 잘 돌아가요.
-- 설치: `SWGR-NoBlackBars-pak-v2.1.1.zip`을 게임 폴더에 풀어서 `zzz_SWGR_NoBlackBars_P.pak`,
-  `.ucas`, `.utoc` 3개가 `STAR WARS Galactic Racer\Griffin\Content\Paks\~mods\`에 들어가게 하세요.
-  게임 원래 pak 파일은 건드리지 않아요.
-- 지우기: 그 3개만 지우면 돼요.
+- 넣고 빼는 법: [설치와 삭제](#설치와-삭제)의 ③을 보세요. 파일 3개(`zzz_SWGR_NoBlackBars_P.pak`, `.ucas`,
+  `.utoc`)를 게임의 `Griffin\Content\Paks\~mods\`에 넣고, 빼려면 그 3개만 지우면 돼요. 게임 원래 pak 파일은
+  건드리지 않아요.
 - 2026년 10월 버전 게임에 맞춰 만들었어요. 게임 업데이트로 그 화면들이 바뀌어서 이상해 보이면
   빼 주세요.
 
