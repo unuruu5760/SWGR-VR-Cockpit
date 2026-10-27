@@ -529,6 +529,7 @@ def lua_lit(v):
     if isinstance(v, bool): return 'true' if v else 'false'
     if isinstance(v, (int, float)): return repr(v)
     if isinstance(v, str): return json.dumps(v)
+    if isinstance(v, list): return '{' + ', '.join(lua_lit(x) for x in v) + '}'
     return '{' + ', '.join('[' + json.dumps(str(k)) + '] = ' + lua_lit(x) for k, x in v.items()) + '}'
 
 

@@ -69,9 +69,12 @@ V.tunable('feel', 'airLift', 5.0, 0, 15, 'Rise in the air (cm)', 'While airborne
 V.tunable('feel', 'lungeMax', 12.5, 5, 60, 'Lunges: farthest forward (cm)',
     'How far forward the view may go on boost and start lunges (and when it leans forward on landings). The lunge goes out to here and stays a moment, so this is how far the boost throws you. Raise it for a bigger lunge; lower it if you end up in the dashboard. 12.5 = as before.')
 V.tunable('feel', 'landFloor', 8.29, 0, 15, 'Lowest point below normal (cm)', 'How far below your normal eye height a landing may press the view. You see inside the pilot body or it is too deep: lower it. Landings feel weak: raise it. 0 = never below the normal height.')
-V.tunable('boost', 'hitstopStrength', 0.333, 0, 1, 'Hit-stop strength (ramjet / start)', 'At ramjet ignition and the race start the whole game slows down for a split second (when "Hit-stop" is ticked). 1 = down to about a quarter speed. 0 = no slow-down.')
-V.tunable('boost', 'hitstopAB', 0.077, 0, 1, 'Hit-stop strength (afterburner)', 'The same split-second slow-down for the afterburner lunge; very light by default. 0 = none.')
-V.tunable('boost', 'hitstopTime', 0.164, 0.05, 0.4, 'Hit-stop length (s)', 'How long the slow-down lasts (seconds). Longer = a longer "freeze".')
+-- (the hit-stop: since 2026-10-27 only the picture stops short and shoots on - see "hit-stop" below - with
+-- new defaults for every vehicle; the old ones were 0.333 / 0.077 / 0.164 (.before: one saved equal to them
+-- by an older version was never the user's own), cars 0.53 / 0.33 / 0.16 (00_core))
+V.tunable('boost', 'hitstopStrength', 0.7, 0, 1, 'Hit-stop strength (ramjet / start)', 'How hard what you see stops short at ramjet ignition and the race start (when the hit-stop is ticked). 1 = the strongest (about a quarter speed), 0 = no stop. Only your picture: the game keeps its full speed.').before = 0.333
+V.tunable('boost', 'hitstopAB', 0.5, 0, 1, 'Hit-stop strength (afterburner)', 'The same stop for the afterburner. 0 = none.').before = 0.077
+V.tunable('boost', 'hitstopTime', 0.1, 0.05, 0.4, 'Hit-stop length (s)', 'How long the stop lasts (seconds) before it shoots on to catch up. The faster you go, the shorter a long one is cut: what you see can only be drawn so far behind.').before = 0.164
 V.tunable('boost', 'warpAmount', 3.0, -5, 5, 'Warp pulse strength (+ / -)', 'At ramjet ignition and the race start the size of the world pulses for a moment (when "Warp pulse" is ticked). Plus = the world briefly shrinks and moves away, minus = it briefly grows and rushes at you. Further from 0 = stronger. 0 = no pulse.')
 
 -- % of a group for the current vehicle: its own value if it has one, else the shared one. On top, per
@@ -181,41 +184,51 @@ local function warpStart()
     warp.t0 = V.t
 end
 
--- hit-stop: the game runs slow for a moment (SetGlobalTimeDilation), then snaps back. Real-time,
--- always restores the dilation it found.
-local hs = { active = false, t = 0, slow = 1, base = 1, last = nil }
+-- the hit-stop's state (see "hit-stop" below)
+local fh = { active = false, t = 0, slow = 1, hold = 0.16, D = 0, Dpeak = 0, ownLag = nil, ownOk = nil, ownWhy = nil,
+    others = {}, lags = {}, leftSet = {}, found = {}, prep = {}, checking = {}, fx = {}, fxS = nil, checked = {}, freeze = 0, freezeL = nil,
+    lagMost = 0, mph = 0, applied = false, broken = {}, othersFailed = nil, info = { used = false }, told = {}, failedParts = {} }
+local hsStart, hsEnd
+local checkStart                           -- (the hit-stop check, below)
+-- The hit-stop's own settings: fixed, no menu - only the hit-stop on / off, its strengths and its length
+-- are the player's (2026-10-27, the user: the rest was for working it out). The tests change them.
+--   view / others / fx: your vehicle, the 6 nearest you see, their effects are slowed; pods (podsOnline:
+--   online too): podracers; sling: it shoots on right after the stall; freeze: the cockpit shake held
+--   (off: the old hit-stop never held it); maxLag: cm drawn behind at most; catch: s to catch up;
+--   catchMax: without sling, catching up at most this many in 100 faster; check / log: the hit-stop
+--   check and the per-event lines (only for working on it - failures are always said).
+V.fhOpt = { view = true, others = true, fx = true, pods = true, podsOnline = true, sling = true, freeze = false,
+    maxLag = 3000, catch = 0.35, catchMax = 8, check = false, log = false }
+-- (an object still there? never touched once gone; without UEVR's check (the tests) taken as there)
+local function alive(o)
+    if not o then return false end
+    local hook = rawget(_G, 'UEVR_UObjectHook')
+    if not hook then return true end
+    local ok, yes = pcall(function() return hook.exists(o) end)
+    return ok and yes == true
+end                            -- (below)
 local function gsCall(fn)
     local gs = api:find_uobject('Class /Script/Engine.GameplayStatics')
     local ctx = api:get_player_controller(0)
     if not gs or not ctx then return nil end
     return fn(gs:get_class_default_object(), ctx)
 end
-local function setDilation(x)
-    if hs.last and math.abs(hs.last - x) < 0.005 then return end
-    hs.last = x
-    local ok, err = pcall(gsCall, function(cdo, ctx) cdo:SetGlobalTimeDilation(ctx, x) end)
-    if not ok then log('time dilation failed: '..tostring(err)); hs.active = false end
-end
-local function hitstopEnd()
-    -- (hs.last cleared first: the ramp's last step can be within setDilation's 0.005 skip window)
-    if hs.active then hs.active = false; hs.last = nil; setDilation(hs.base); hs.last = nil end
-end
+-- hit-stop: at ramjet ignition, the afterburner and the race start what you see stops short for a moment
+-- and shoots on to catch up (see "hit-stop" below). Until 2026-10-27 it slowed the whole game
+-- (SetGlobalTimeDilation): online that cost the race time for good, so now only the picture does it.
+-- A failure to start stops it for the session (said in the log and the menu).
 local function hitstop(strength)
-    if strength <= 0 or cfg.hitstopTime <= 0 then return end
-    if not hs.active then
-        local ok, cur = pcall(gsCall, function(cdo, ctx) return cdo:GetGlobalTimeDilation(ctx) end)
-        hs.base = (ok and tonumber(cur) and tonumber(cur) > 0) and tonumber(cur) or 1
+    if strength <= 0 or cfg.hitstopTime <= 0 or not hsStart then return end
+    local okS, errS = pcall(hsStart, strength)
+    if not okS then
+        fh.broken.start, fh.info.stopped = tostring(errS), true
+        log('hit-stop: starting it failed, it stops: '..fh.broken.start)
+        pcall(hsEnd)
     end
-    hs.active, hs.t, hs.last = true, 0, nil
-    hs.slow = hs.base * math.max(0.1, 1 - 0.75 * math.min(1, strength))
-end
-local function hitstopTick(dt)
-    if not hs.active then return end
-    hs.t = hs.t + dt
-    local d = cfg.hitstopTime
-    if hs.t < d then setDilation(hs.slow)
-    elseif hs.t < d + K.HS_RAMP then setDilation(hs.slow + (hs.base - hs.slow) * ((hs.t - d) / K.HS_RAMP))
-    else hitstopEnd() end
+    if checkStart and V.fhOpt.check then
+        local why = (not fh.active and 'it did not start') or (not fh.ownOk and fh.ownWhy) or nil
+        pcall(checkStart, 'picture', fh.active and fh.slow or 1, fh.active and fh.hold or cfg.hitstopTime, why)
+    end
 end
 
 -------------------------------------------------------------------------------- shake along with the vehicle (test)
@@ -357,6 +370,7 @@ end
 local carTilt = { 0, 0 }                   -- and its tilt (pitch, roll degrees), the view turns the same
 -- the part to move: up from the seat mesh, the last parent before the vehicle's root (the root is the
 -- physics body); CustomisationRoot itself if it is not the root
+local partOf                               -- (below: the part over a given seat mesh)
 local function carFind(p)
     local seat = nil
     for _, c in ipairs(V.components(p, 'Engine.StaticMeshComponent')) do
@@ -364,6 +378,9 @@ local function carFind(p)
         if a and S.anchor and a:get_full_name() == S.anchor.model then seat = c; break end
     end
     if not seat then return nil, 'no seat mesh' end
+    return partOf(p, seat)
+end
+partOf = function(p, seat)
     local root = p.RootComponent
     local rootId = root and root:get_address()
     local chain, c, below = { seat:get_fname():to_string() }, seat, nil
@@ -406,9 +423,17 @@ local function carStop()
     local b = car.base
     -- (a free-standing part is placed by the game every frame: nothing to put back)
     if car.moved and car.comp and b and car.parent then pcall(carSet, b[1], b[2], b[3], b[4], b[5], b[6]) end
-    car.moved, car.base = false, nil
+    car.moved, car.base, car.lagged = false, nil, false
     carT[1], carT[2], carT[3], carTilt[1], carTilt[2] = 0, 0, 0, 0, 0
     slamReset()
+end
+-- another vehicle (or none): its body is found anew, and what the hit-stop found was for the old one
+local function carNewPawn(id)
+    if fh.active and hsEnd then pcall(hsEnd) end
+    carStop()
+    car.pawn, car.comp, car.parent, car.failed = id, nil, nil, nil
+    fh.checked, fh.told, fh.found, fh.foundKey, fh.ownNot, fh.ownFx, fh.prep, fh.checking = {}, {}, {}, nil, nil, {}, {}, {}
+    fh.failedParts = {}
 end
 local function wrap180(a) return (a + 180) % 360 - 180 end
 -- quaternions { x, y, z, w }: product, inverse (unit), and the engine's rotator <-> quaternion
@@ -435,7 +460,7 @@ local function carAmount(p)
     local kl = math.max(0, math.min(3, (V.rideVal('shakeAlongLand') or 0) / 100))
     local km = math.max(0, math.min(1, (V.rideVal('shakeAlongMove') or 0) / 100))
     local id = p and p:get_address()
-    if id ~= car.pawn then carStop(); car.pawn, car.comp, car.parent, car.failed = id, nil, nil, nil end
+    if id ~= car.pawn then carNewPawn(id) end
     if not V.cfg.shakeAlongOn or (k <= 0 and kl <= 0 and km <= 0) or not p or car.failed or S.yielding() then return 0, 0, 0 end
     if not car.comp then
         local ok, c, why, free = pcall(carFind, p)
@@ -462,6 +487,11 @@ local function carMove(q)
     -- (the pod: a little only - its mesh may be what the game checks collisions with)
     local lim, limT = car.free and POD_MOVE or 1e9, car.free and POD_TILT or 1e9
     local wx, wy, wz = rotate(q, clamp(carT[1], lim), clamp(carT[2], lim), clamp(carT[3], lim))
+    -- (the hit-stop: drawn behind - checked when it started: a pod only offline and free of collision)
+    local lag = fh.ownLag
+    car.lagged = lag ~= nil
+    if lag then wx, wy, wz = wx + lag[1], wy + lag[2], wz + lag[3] end
+    car.drawOff = { wx, wy, wz }                   -- (what the seat was moved by for this frame, world axes)
     local pq = car.parent and V.quat(car.parent:K2_GetComponentToWorld().Rotation)
     local rx, ry, rz = wx, wy, wz
     if pq then rx, ry, rz = unrotate(pq, wx, wy, wz) end
@@ -477,15 +507,28 @@ local function carMove(q)
     car.moved = true
 end
 V.shakeAlongInfo = car                     -- (menu: why it is not possible)
+local fhMoveOthers                         -- (below)
 V.beforeSeat = function()
+    if fh.active and fhMoveOthers and not fh.othersFailed then
+        local okO, errO = pcall(fhMoveOthers)
+        if not okO then fh.othersFailed = tostring(errO); log('hit-stop: the other vehicles left alone from now on: '..fh.othersFailed) end
+    end
     if not car.want then return end
+    -- (only on your vehicle as it is now: leaving the race from the pause menu may have taken it away)
+    local okP, p = pcall(function() return api:get_local_pawn(0) end)
+    if not okP or not p or p:get_address() ~= car.pawn then car.want = false; return end
     local ok, err = pcall(carMove, car.q)
-    if not ok then car.failed, car.want = tostring(err), false; log('shake along with the vehicle turned off: '..car.failed); carStop() end
+    if not ok then
+        car.failed, car.want = tostring(err), false
+        log((V.cfg.shakeAlongOn and 'shake along with the vehicle turned off: ' or 'hit-stop: your body part can not be moved, left alone: ')..car.failed)
+        carStop()
+        fh.ownOk, fh.ownLag, fh.ownWhy = false, nil, 'its body part can not be moved (see the log)'
+    end
 end
 
 local function reset()
+    if hsEnd then pcall(hsEnd) end
     pcall(carStop)
-    hitstopEnd()
     st.abL, st.abLunging = 0, false
     for i = 1, 3 do st.sp[i], st.sv[i], st.accLP[i] = 0, 0, 0 end
     st.prevVel, st.burst, st.push = nil, 0, 0
@@ -501,6 +544,1136 @@ local function event(name)
     log(string.format('%s at %.0f mph', name, V.feelInfo.mph or 0))
 end
 local function kick(x, y, z) st.sv[1], st.sv[2], st.sv[3] = st.sv[1] + x, st.sv[2] + y, st.sv[3] + z end
+
+-------------------------------------------------------------------------------- hit-stop
+-- 2026-10-27, a player: "the hit-stop costs time in online races, about 8.5 m per ramjet in an online
+-- podrace". It did: it slowed the whole game on this PC (global time dilation), and online this PC works
+-- out its own vehicle and sends it to the server (Server_UpdateAuthoritiveBodyState: pose, velocity,
+-- time), so the time it slowed was lost for good - about 0.056 s per ramjet with the shared values,
+-- 0.087 s on a landspeeder. Now it slows only what you see; the game runs on at full speed (fh):
+--  - a time behind, D, grows as slowing the game would lose it through the hold, then is given back right
+--    after it, over a short catch-up (V.fhOpt.catch; sling: a cubic that starts at the hold's speed);
+--  - your vehicle's body part and the other vehicles near you are drawn behind where they are: each one's
+--    way back is added up from its own velocity while it slows (a hit or a landing in the middle bends
+--    it, never makes it jump), then given back with D; eased off toward V.fhOpt.maxLag;
+--  - for the picture only: put back where the game had it first thing in the tick and drawn behind again
+--    right before the frame (relative place, teleport), so the game never works with a moved part;
+--  - their effects (flames, exhaust: Niagara) run slower by the same factor (their own time dilation).
+--    (V.fhOpt.sling off - a ramp back, then the catch-up - and freeze on - the cockpit's shake held - were
+--    tried while working it out and stay for that.)
+-- The sound is left alone (lowering its pitch bent the music too, 2026-10-27, the user).
+-- A part is moved only if nothing in it collides (no physics, no overlap events; checked once per part,
+-- said in the log). Podracers' parts too (never the containers the game places them by - moving one
+-- wrecked the vehicle, 2026-10-16), online as well (V.fhOpt.podsOnline: tried offline, the game never
+-- works with a moved part). Worked out with a test menu against the old one (2026-10-27: the same look
+-- through the stall, the frames as many as with the old one).
+local FH_RANGE, FH_MAX = 15000, 6          -- cm, vehicles: the others drawn behind (12 cost late frames, 2026-10-27)
+-- a part and everything under it: may it be drawn behind? Not if anything in it has physics collision
+-- (ECollisionEnabled: 0 none, 1 query only, anything else with physics), simulates physics, or is a query
+-- part that sends overlap events (it would enter and leave triggers)
+local function checkNew(comp)
+    local kids = {}
+    if not pcall(function() comp:GetChildrenComponents(true, kids) end) then return nil end
+    local w = { list = { comp }, i = 0, none = 0, query = 0, overlap = 0, phys = 0, unread = 0, raw = {}, bad = {} }
+    for _, k in ipairs(kids) do w.list[#w.list + 1] = k end
+    return w
+end
+local function checkOne(w, c, prim)
+    local okA, isP = pcall(function() return prim ~= nil and c:is_a(prim) end)
+    if not (okA and isP) then return end
+    local ok, e = pcall(function() return tonumber(c:GetCollisionEnabled()) end)
+    local okS, sim = pcall(function() return c:IsSimulatingPhysics() end)
+    local was = w.phys + w.overlap + w.unread
+    if not ok or not e then
+        w.unread = w.unread + 1
+    else
+        w.raw[e] = (w.raw[e] or 0) + 1
+        if okS and sim == true then w.phys = w.phys + 1
+        elseif e == 0 then w.none = w.none + 1
+        elseif e == 1 then
+            local okO, ov = pcall(function() return c:GetGenerateOverlapEvents() end)
+            if not okO or ov == nil then okO, ov = pcall(function() return c.bGenerateOverlapEvents end) end
+            if not okO or ov == nil then w.unread = w.unread + 1
+            elseif ov then w.overlap = w.overlap + 1
+            else w.query = w.query + 1 end
+        else w.phys = w.phys + 1 end
+    end
+    if w.phys + w.overlap + w.unread > was and #w.bad < 4 then
+        local okN, n = pcall(function() return c:get_fname():to_string()..' ('..c:get_class():get_fname():to_string()..', '..tostring(e)..')' end)
+        w.bad[#w.bad + 1] = okN and n or '?'
+    end
+end
+local function checkVerdict(w)
+    local vals = {}
+    for e, n in pairs(w.raw) do vals[#vals + 1] = e..' x'..n end
+    table.sort(vals)
+    local text = string.format('%d parts: %d no collision, %d query only, %d query with overlap events, %d with physics, %d unreadable (collision values %s)',
+        w.none + w.query + w.overlap + w.phys + w.unread, w.none, w.query, w.overlap, w.phys, w.unread, #vals > 0 and table.concat(vals, ', ') or 'none')
+    if #w.bad > 0 then text = text..'; not free: '..table.concat(w.bad, ', ') end
+    return w.phys == 0 and w.unread == 0 and w.overlap == 0 and w.none + w.query > 0, text
+end
+local function physicsFree(comp)
+    local w = checkNew(comp)
+    if not w then return false, 'its parts can not be listed' end
+    local prim = V.class('Engine.PrimitiveComponent')
+    for _, c in ipairs(w.list) do checkOne(w, c, prim) end
+    return checkVerdict(w)
+end
+local function checkPart(comp)
+    local id = comp:get_address()
+    local chk = fh.checked[id]
+    if not chk then
+        local ok, safe, text = pcall(physicsFree, comp)
+        chk = { ok and safe == true, ok and text or ('check failed: '..tostring(safe)) }
+        fh.checked[id] = chk
+        fh.checking[id] = nil
+    end
+    return chk[1], chk[2]
+end
+-- (the same check a piece at a time: up to n of its parts a call; the verdict once done, nil before -
+-- a whole vehicle at once was an 18 ms frame, 2026-10-27)
+local function checkPartStep(comp, n)
+    local id = comp:get_address()
+    local chk = fh.checked[id]
+    if chk then return chk[1], chk[2] end
+    local ok, safe, text = pcall(function()
+        local w = fh.checking[id]
+        if not w then
+            w = checkNew(comp)
+            if not w then return false, 'its parts can not be listed' end
+            fh.checking[id] = w
+            return nil
+        end
+        local prim = V.class('Engine.PrimitiveComponent')
+        for _ = 1, n do
+            if w.i >= #w.list then break end
+            w.i = w.i + 1
+            checkOne(w, w.list[w.i], prim)
+        end
+        if w.i < #w.list then return nil end
+        return checkVerdict(w)
+    end)
+    if ok and safe == nil then return nil end
+    fh.checking[id] = nil
+    fh.checked[id] = { ok and safe == true, ok and text or ('check failed: '..tostring(safe)) }
+    return fh.checked[id][1], fh.checked[id][2]
+end
+-- a way back, eased off toward the farthest (fhMaxLag): as it is up to 70 % of it
+local function capLag(x, y, z)
+    local most = math.max(0, tonumber(V.fhOpt.maxLag) or 1500)
+    local n = math.sqrt(x * x + y * y + z * z)
+    if n <= 0 or most <= 0 then return 0, 0, 0 end
+    local k = kneeLim(n, 0.7 * most, most) / n
+    return x * k, y * k, z * k
+end
+-- (still where we put it?)
+local function at(l, p) return math.abs(l.X - p[1]) + math.abs(l.Y - p[2]) + math.abs(l.Z - p[3]) <= 0.05 end
+-- Still there? UEVR's object check knows vehicles and effects, but not every part: 2026-10-27 it did not
+-- know this game's body containers (CstVehicleContainer), so the hit-stop dropped your body as gone and
+-- never moved it (the hit-stop check showed the seat at full speed). So a part is checked against its
+-- vehicle's own list of parts (once per event, no call on the part itself), and only a vehicle goes
+-- through UEVR's check - unless that does not know vehicles either (then said once, and taken as there).
+local function pawnAlive(o)
+    if fh.pawnBlind then return o ~= nil end
+    return alive(o)
+end
+local function pawnKnown(o)
+    if fh.pawnBlind or not rawget(_G, 'UEVR_UObjectHook') or alive(o) then return end
+    fh.pawnBlind = true
+    log('hit-stop: UEVR\'s object check does not know the vehicles: they are not checked while it runs')
+end
+local function partsOf(o)
+    local set = {}
+    for _, c in ipairs(V.components(o, 'Engine.SceneComponent')) do set[c:get_address()] = true end
+    return set
+end
+-- (a vehicle's records found among its parts are marked; one of those no longer there - broken off, or its
+-- parts made anew - and it is looked into again. A record that never was among them - a part of an actor
+-- hung on it - or one that failed never counts)
+local function markHad(recs, have)
+    for _, r in ipairs(recs) do r.had = have[r.comp:get_address()] == true end
+end
+local function partGone(recs, have)
+    for _, r in ipairs(recs) do if r.had and not r.failed and not have[r.comp:get_address()] then return true end end
+    return false
+end
+local fhS = {}
+-- (a part's place only - its rotation as it is; no sweep, teleport)
+local function setLoc(r, x, y, z)
+    fhS.loc = fhS.loc or StructObject.new(api:find_uobject('ScriptStruct /Script/CoreUObject.Vector'))
+    fhS.hit = fhS.hit or StructObject.new(api:find_uobject('ScriptStruct /Script/Engine.HitResult'))
+    fhS.loc.X, fhS.loc.Y, fhS.loc.Z = x, y, z
+    r.comp:K2_SetRelativeLocation(fhS.loc, false, fhS.hit, true)
+    r.last = { x, y, z }
+end
+-- What it costs, per event: the time of the put-back, the tick and the move before the frame (the
+-- clock: os.clock - wall time in ms steps on Windows - or none). 2026-10-27, the user: "frame drops with
+-- many opponents" - every other vehicle's parts and effects were moved twice a frame.
+local clock = (type(os) == 'table' and type(os.clock) == 'function') and os.clock or function() return 0 end
+local function costAdd(key, t0)
+    local c = fh.cost
+    if not c then return end
+    local d = clock() - t0
+    c[key], c.cur = c[key] + d, c.cur + d
+end
+-- offline: a game on this PC alone (standalone, no net driver). Not known counts as online.
+local function fhOffline()
+    if fh.broken.offline then return false end
+    local world = nil
+    local ok, yes = pcall(function()
+        world = api:get_engine().GameViewport.World
+        return api:find_uobject('Class /Script/Engine.KismetSystemLibrary'):get_class_default_object():IsStandalone(world)
+    end)
+    if not ok then
+        fh.broken.offline = tostring(yes)
+        log('hit-stop: offline or online can not be told ('..fh.broken.offline..'): podracers are left alone')
+        return false
+    end
+    if yes ~= true then return false end
+    local okN, nd = pcall(function() return world.NetDriver end)
+    return not (okN and nd ~= nil)
+end
+-- A podracer (only with "Podracers too", 2026-10-27, the user: "do podracers too, I'll try it"): its
+-- free containers (hanging on nothing: the pod, the engines) stay where the game puts them every frame;
+-- what hangs right under each is drawn behind instead, if it does not collide. (The 2026-10-16 wreck
+-- came from moving a container: the game places the pod's next place from it, so it added up.)
+local function podParts(o, except)
+    local root = o.RootComponent
+    local rootId = root and root:get_address()
+    local list = {}
+    for _, c in ipairs(V.components(o, 'Engine.SceneComponent')) do
+        local okP, par = pcall(function() return c:GetAttachParent() end)
+        if okP and par == nil and c:get_address() ~= rootId then
+            local kids = {}
+            if pcall(function() c:GetChildrenComponents(false, kids) end) then
+                for _, k in ipairs(kids) do
+                    if k:get_address() ~= except then list[#list + 1] = k end
+                end
+            end
+        end
+    end
+    return list
+end
+local function podRecords(o, except, who)
+    local recs = {}
+    for _, k in ipairs(podParts(o, except)) do
+        local safe, text = checkPart(k)
+        local id = k:get_address()
+        if not fh.told[id] then
+            fh.told[id] = true
+            if (not safe and who == 'yours') or V.fhOpt.log then log('hit-stop, podracer ('..who..'): '..k:get_fname():to_string()..' - '..text..(safe and ': drawn behind' or ': left alone')) end
+        end
+        if safe then recs[#recs + 1] = { pawn = o, comp = k } end
+    end
+    return recs
+end
+-- Your effects that hang outside the parts drawn behind (on the vehicle's middle, or on a container that
+-- stays): drawn behind with them, those free of collision (2026-10-27, the user: the laser between a
+-- podracer's engines ran ahead and came back - it hangs on CustomisationRoot). Taken anew at each event:
+-- effects come and go, so each frame only those still in the vehicle's list are touched (fhFxHere). An
+-- effect whose particles live in the world may still not follow: the game makes them in its own tick,
+-- where everything is in its real place. Said once per vehicle (name, system, what it hangs on).
+local function fxFree(c)
+    local ok, e = pcall(function() return tonumber(c:GetCollisionEnabled()) end)
+    return ok and e == 0
+end
+-- (its system's name, and whether it is a beam - a line drawn between two places: the laser between a
+-- podracer's engines (NS_PlasmaBeam), its cables (NS_CableBeam). Only those are drawn behind when they
+-- hang outside the parts: the rest - hull, ground wake ... 22 of 25 on a podracer - were 80 % of the
+-- cost, 2026-10-27 7-8 ms a frame with 4-6 podracers near, and nothing to see)
+local function fxSystem(c)
+    local ok, sys = pcall(function() local a = c.Asset; return a and a:get_fname():to_string() or '?' end)
+    sys = ok and sys or '?'
+    return sys, sys:lower():find('beam', 1, true) ~= nil
+end
+local function fhFxHere(pw)
+    local set = {}
+    for _, c in ipairs(V.components(pw, 'Niagara.NiagaraComponent')) do set[c:get_address()] = true end
+    return set
+end
+local function fhLooseFx(p)
+    local moved = {}
+    if car.comp then moved[car.comp:get_address()] = true end
+    for _, r in pairs(fh.others) do if r.mine then moved[r.comp:get_address()] = true end end
+    local names, left = {}, 0
+    fh.ownFx = fh.ownFx or {}
+    for _, c in ipairs(V.components(p, 'Niagara.NiagaraComponent')) do
+        local id = c:get_address()
+        local v = fh.ownFx[id]
+        if not v then
+            -- (looked at once per effect: a beam, hanging outside what is drawn behind, free of collision)
+            local sys, beam = fxSystem(c)
+            local covered = true
+            if beam then
+                local x = c
+                covered = false
+                for _ = 1, 24 do
+                    if not x then break end
+                    if moved[x:get_address()] then covered = true; break end
+                    local ok, up = pcall(function() return x:GetAttachParent() end)
+                    x = ok and up or nil
+                end
+            end
+            local okA, abs = pcall(function() return c:IsUsingAbsoluteLocation() end)
+            v = { ok = beam and not covered and fxFree(c), abs = okA and abs == true, new = true, sys = sys, beam = beam }
+            fh.ownFx[id] = v
+        end
+        if v.new and not v.beam then left = left + 1 end
+        if v.ok and not fh.others[id] and not fh.failedParts[id] then
+            fh.others[id] = { pawn = p, comp = c, mine = true, fx = true, abs = v.abs }
+            if v.new and not fh.told.looseFx and #names < 30 then
+                local okP, par = pcall(function() local u = c:GetAttachParent(); return u and u:get_fname():to_string() or 'nothing' end)
+                names[#names + 1] = c:get_fname():to_string()..' ('..v.sys..') < '..(okP and par or '?')..(v.abs and ' [abs]' or '')
+            end
+        end
+        v.new = false
+    end
+    if (#names > 0 or left > 0) and not fh.told.looseFx then
+        fh.told.looseFx = true
+        if V.fhOpt.log then log('hit-stop: your beams drawn behind with it too ('..#names..'): '..table.concat(names, ', ')..'; '..left..' other effects left as they are') end
+    end
+end
+-- your own body part: the one ride shake moves (found here if ride shake is off). Gives ok and, if not,
+-- a short reason for the menu (the details are in the log)
+local CANT = 'its body part can not be moved (see the log)'
+local function fhOwn(p)
+    local id = p:get_address()
+    if car.failed then return false, CANT end
+    if car.comp and not partsOf(p)[car.comp:get_address()] then car.comp, car.parent, car.base, car.moved = nil, nil, nil, false end
+    if not car.comp then
+        if fh.ownNot == id then return false, CANT end
+        local ok, c, why, free = pcall(carFind, p)
+        if not ok or not c then
+            fh.ownNot = id
+            log('hit-stop: your body part not found: '..(ok and tostring(why) or tostring(c)))
+            return false, CANT
+        end
+        car.comp, car.parent, car.free = c, c:GetAttachParent(), free == true
+    end
+    if car.free then
+        if not V.fhOpt.pods then return false, 'Podracers too is off' end
+        if not fh.offline then
+            return false, fh.broken.offline and 'podracers: offline or online can not be told (see the log)' or 'podracers: offline only for now'
+        end
+    end
+    local cid = car.comp:get_address()
+    local safe, text = checkPart(car.comp)
+    if not fh.told[cid] then
+        fh.told[cid] = true
+        if not safe or V.fhOpt.log then log('hit-stop: your '..(car.free and 'pod ' or 'body part ')..car.comp:get_fname():to_string()..' - '..text..(safe and ': drawn behind' or ': left alone')) end
+    end
+    if not safe then return false, 'its body part collides (see the log)' end
+    if car.free then
+        -- (the rest of it - the engines - drawn behind with it, those that do not collide)
+        local f, have = fh.found[id], partsOf(p)
+        if f and f.mine and partGone(f.mine, have) then f = nil end      -- (a part gone: looked into again)
+        if not (f and f.mine) then f = { mine = podRecords(p, cid, 'yours') }; markHad(f.mine, have); fh.found[id] = f end
+        for _, r in ipairs(f.mine) do
+            local a = r.comp:get_address()
+            if fh.failedParts[a] then r.failed = true end              -- (failed before it was looked into again)
+            if not r.failed and have[a] then r.mine = true; fh.others[a] = r end
+        end
+    end
+    pcall(fhLooseFx, p)
+    return true, nil
+end
+-- another vehicle's body part (over its seat mesh, the mesh with the seat socket): a list of parts to
+-- draw behind, or nil and why
+local function fhOther(o)
+    local seat = nil
+    for _, c in ipairs(V.components(o, 'Engine.StaticMeshComponent')) do
+        local ok, has = pcall(function() return c:DoesSocketExist('PilotSeat') end)
+        if ok and has then seat = c; break end
+    end
+    if not seat then return nil, 'no seat mesh' end
+    local comp, why, free = partOf(o, seat)
+    if not comp then return nil, why end
+    if free then
+        if not V.fhOpt.pods then return nil, 'a podracer (Podracers too is off)' end
+        if not fh.offline then return nil, 'a podracer (offline only for now)' end
+        local recs = podRecords(o, nil, o:get_class():get_fname():to_string())
+        if #recs == 0 then return nil, 'a podracer with no part free of collision' end
+        recs.pod = true
+        return recs
+    end
+    local safe, text = checkPart(comp)
+    if safe then return { { pawn = o, comp = comp } } end
+    -- (something in it collides - every other vehicle had one part with physics in it, 2026-10-27. If the
+    -- part only holds others (no shape of its own), what hangs right under it is drawn behind one by one,
+    -- each free of collision; what collides stays where it is)
+    local prim = V.class('Engine.PrimitiveComponent')
+    local okP, isPrim = pcall(function() return prim ~= nil and comp:is_a(prim) end)
+    if not okP or isPrim then return nil, text end
+    local kids, recs, kept = {}, {}, {}
+    if not pcall(function() comp:GetChildrenComponents(false, kids) end) then return nil, text end
+    for _, k in ipairs(kids) do
+        if checkPart(k) then recs[#recs + 1] = { pawn = o, comp = k } else kept[#kept + 1] = k:get_fname():to_string() end
+    end
+    if #recs == 0 then return nil, text end
+    if V.fhOpt.log then
+        log('hit-stop: another vehicle ('..o:get_class():get_fname():to_string()..'): '..text..' - what hangs under '
+            ..comp:get_fname():to_string()..' drawn behind one by one ('..#recs..'), left where it is: '..table.concat(kept, ', '))
+    end
+    return recs
+end
+-- Before another vehicle is looked into (fhOther), the collision checks it will need are done a piece a
+-- call (FH_CHECK_STEP parts), so no frame does a whole vehicle: the seat search one call, then its body
+-- part (and, if something in it collides, the parts right under it) or a podracer's parts. True once
+-- fhOther finds them all ready.
+local FH_CHECK_STEP = 30
+local function fhPrepare(o, id)
+    local pr = fh.prep[id]
+    if not pr then
+        local seat = nil
+        for _, c in ipairs(V.components(o, 'Engine.StaticMeshComponent')) do
+            local ok, has = pcall(function() return c:DoesSocketExist('PilotSeat') end)
+            if ok and has then seat = c; break end
+        end
+        pr = { todo = {} }
+        if seat then
+            local comp, _, free = partOf(o, seat)
+            if comp and free then
+                if V.fhOpt.pods and fh.offline then pr.todo = podParts(o, nil) end
+            elseif comp then
+                pr.todo, pr.body = { comp }, comp:get_address()
+            end
+        end
+        fh.prep[id] = pr
+        return false
+    end
+    local c = pr.todo[#pr.todo]
+    if not c then return true end
+    local safe = checkPartStep(c, FH_CHECK_STEP)
+    if safe == nil then return false end
+    table.remove(pr.todo)
+    if not safe and c:get_address() == pr.body then
+        -- (something in it collides: the parts right under it next, as fhOther will look at them)
+        pr.body = nil
+        local prim = V.class('Engine.PrimitiveComponent')
+        local okP, isPrim = pcall(function() return prim ~= nil and c:is_a(prim) end)
+        local kids = {}
+        if okP and not isPrim and pcall(function() c:GetChildrenComponents(false, kids) end) then
+            for _, k in ipairs(kids) do pr.todo[#pr.todo + 1] = k end
+        end
+    end
+    return #pr.todo == 0
+end
+-- another podracer's effects hanging right on its middle (its root - the laser between its engines, its
+-- cables): drawn behind with it, as yours - only the FH_FX_NEAR nearest, and only podracers (where a
+-- laser runs ahead; others' hull effects are too small to see). What each effect is, is kept with the
+-- vehicle (one look at its parent per effect, ever).
+local FH_FX_NEAR = 3
+local function fhLooseFxOf(o, pawnId, f)
+    local root = o.RootComponent
+    local rootId = root and root:get_address()
+    if not rootId then return end
+    f.fxv = f.fxv or {}
+    for _, c in ipairs(V.components(o, 'Niagara.NiagaraComponent')) do
+        local id = c:get_address()
+        local v = f.fxv[id]
+        if v == nil then
+            local _, beam = fxSystem(c)
+            local okP, par = false, nil
+            if beam then okP, par = pcall(function() return c:GetAttachParent() end) end
+            v = beam and okP and par and par:get_address() == rootId and fxFree(c) or false
+            if v then
+                local okA, abs = pcall(function() return c:IsUsingAbsoluteLocation() end)
+                v = { abs = okA and abs == true }
+            end
+            f.fxv[id] = v
+        end
+        if v and not fh.others[id] and not fh.failedParts[id] then
+            fh.others[id] = { pawn = o, comp = c, fx = true, abs = v.abs, pawnId = pawnId }
+        end
+    end
+end
+-- the vehicles near you; what was found on each is kept (per vehicle, until yours changes). At most
+-- `budget` vehicles are looked into per call - the rest on the next ticks (fh.findPending), so the race
+-- start with every car near is not one long frame. A vehicle left alone is looked at again after 5 s
+-- (parts load late); said in the log only when its reason changes. A vehicle found before is checked
+-- against its list of parts (a part gone is never touched) - that too counts in the budget, at most once
+-- in 3 s per vehicle.
+local function fhCollectOthers(p, budget)
+    fh.findPending = false
+    if fh.broken.find then return end
+    local gsC, vc = api:find_uobject('Class /Script/Engine.GameplayStatics'), V.class('Griffin.VehiclePawn')
+    if not gsC or not vc then return end
+    local out = {}
+    local okA, errA = pcall(function() gsC:get_class_default_object():GetAllActorsOfClass(api:get_engine().GameViewport.World, vc, out) end)
+    if not okA then
+        fh.broken.find = tostring(errA)
+        log('hit-stop: the other vehicles can not be listed, left alone from now on: '..fh.broken.find)
+        return
+    end
+    local me, here = p:get_address(), p:K2_GetActorLocation()
+    -- (the ones you can see first: ahead of you and beside you, nearest first; behind you - more than about
+    -- 107 degrees off your heading - only after them. 2026-10-27, the user: "the ones behind are not
+    -- needed, at most you look to the side")
+    local fx, fy, fz = 0, 0, 0
+    pcall(function()
+        local _, v = V.pawnAndVehicle()
+        local r = v.VehicleTransform.Rotation
+        fx, fy, fz = rotate({ r.X, r.Y, r.Z, r.W }, 1, 0, 0)
+    end)
+    local near = {}
+    for _, o in ipairs(out) do
+        if o:get_address() ~= me then
+            local l = o:K2_GetActorLocation()
+            local dx, dy, dz = l.X - here.X, l.Y - here.Y, l.Z - here.Z
+            local d2 = dx * dx + dy * dy + dz * dz
+            if d2 < FH_RANGE * FH_RANGE then
+                local behind = (dx * fx + dy * fy + dz * fz) < -0.3 * math.sqrt(d2)
+                near[#near + 1] = { o = o, d2 = d2, behind = behind }
+            end
+        end
+    end
+    table.sort(near, function(a, b)
+        if a.behind ~= b.behind then return not a.behind end
+        return a.d2 < b.d2
+    end)
+    local made = 0
+    for i = 1, math.min(#near, FH_MAX) do
+        local o = near[i].o
+        local id = o:get_address()
+        pawnKnown(o)                               -- (the engine just gave it: it is there)
+        local f = fh.found[id]
+        if f and not f.recs and V.t - (f.at or 0) >= 5 then f = nil end            -- (left alone: looked at again)
+        local stale = f and f.recs and V.t - (f.seenAt or 0) >= 3
+        local most = budget or FH_MAX
+        if (stale or not f) and made >= most then
+            fh.findPending, f = true, nil                                            -- (next tick)
+        else
+            if stale then
+                made = made + 1
+                f.seenAt = V.t
+                -- (a part gone: dropped whole, so it is looked into again from the start - what came instead
+                -- drawn behind, what is gone never touched)
+                if partGone(f.recs, partsOf(o)) then f = nil; fh.prep[id], fh.found[id] = nil, nil end
+            end
+            if not f and made < most then
+                made = made + 1
+                local okP, ready = pcall(fhPrepare, o, id)
+                if okP and not ready then
+                    fh.findPending = true                                            -- (its checks go on next tick)
+                else
+                    local was = fh.found[id]
+                    local ok, recs, why = pcall(fhOther, o)
+                    f = { recs = ok and recs or nil, pod = ok and recs and recs.pod or false, why = ok and tostring(why) or tostring(recs), at = V.t, seenAt = V.t }
+                    if f.recs then markHad(f.recs, partsOf(o)) end
+                    fh.found[id], fh.prep[id] = f, nil
+                    if V.fhOpt.log and not f.recs and not (was and was.why == f.why) then
+                        log('hit-stop: another vehicle left alone ('..o:get_class():get_fname():to_string()..'): '..f.why)
+                    end
+                end
+            elseif not f then
+                fh.findPending = true
+            end
+        end
+        if f then
+            local any, mine = false, car.comp and car.comp:get_address()
+            for _, r in ipairs(f.recs or {}) do
+                -- (never a part of yours: that one is moved as your body)
+                local a = r.comp:get_address()
+                if fh.failedParts[a] then r.failed = true end          -- (failed before it was looked into again)
+                if not r.failed and a ~= mine then r.pawnId, any = id, true; fh.others[a] = r end
+            end
+            if any then
+                fh.lags[id] = fh.lags[id] or { pawn = o, acc = { 0, 0, 0 }, cur = { 0, 0, 0 } }
+                if i <= FH_FX_NEAR then
+                    fh.fxNear[id] = o                  -- (their effects slowed too: the nearest few)
+                    if f.pod then pcall(fhLooseFxOf, o, id, f) end
+                end
+            else fh.leftSet[id] = true end
+        end
+    end
+end
+-- the others (and your podracer's other parts): drawn behind right before the frame is drawn, like your
+-- body. The resting place is where the game has it now (put back before its tick: fhUndo). A part that
+-- fails is put back and left alone from then on.
+fhMoveOthers = function()
+    local t0 = clock()
+    local aliveOf, turnOf = {}, {}
+    fh.fxNow = fh.fxNow or {}
+    local fxNow = fh.fxNow
+    for id, r in pairs(fh.others) do
+        local L = r.mine and fh.ownLag or (fh.lags[r.pawnId] and fh.lags[r.pawnId].lag)
+        if L and (r.mine or V.fhOpt.others) then
+            local here = aliveOf[r.pawn]
+            if here == nil then here = pawnAlive(r.pawn); aliveOf[r.pawn] = here end
+            if here and r.fx then
+                fxNow[r.pawn] = fxNow[r.pawn] or fhFxHere(r.pawn)
+                here = fxNow[r.pawn][id] == true
+            end
+            if not here then
+                fh.others[id] = nil
+            elseif L[1] * L[1] + L[2] * L[2] + L[3] * L[3] >= 0.25 then     -- (half a centimetre or less: left as it is)
+                local ok, err = pcall(function()
+                    local l = r.comp.RelativeLocation
+                    if not r.base or not r.last or not at(l, r.last) then r.base = { l.X, l.Y, l.Z } end
+                    local lx, ly, lz = L[1], L[2], L[3]
+                    if not r.abs then
+                        if r.parent == nil then r.parent = r.comp:GetAttachParent() or false end
+                        local par = r.parent
+                        if par then
+                            local pa = par:get_address()
+                            local pq = turnOf[pa]
+                            if pq == nil then pq = V.quat(par:K2_GetComponentToWorld().Rotation) or false; turnOf[pa] = pq end
+                            if pq then lx, ly, lz = unrotate(pq, lx, ly, lz) end
+                        end
+                    end
+                    setLoc(r, r.base[1] + lx, r.base[2] + ly, r.base[3] + lz)
+                end)
+                if ok then
+                    r.moved, r.ever, fh.applied = true, true, true
+                else
+                    r.failed, fh.others[id], fh.failedParts[id] = true, nil, true
+                    log('hit-stop: a part left alone from now on ('..tostring(err)..')')
+                    if r.base then pcall(function() setLoc(r, r.base[1], r.base[2], r.base[3]) end) end
+                end
+            end
+        end
+    end
+    costAdd('draw', t0)
+end
+-- first thing in the tick, before the game's own: what was drawn behind goes back where the game had it
+-- (unless the game placed it itself since), so the game never works with a moved part
+local function fhUndo()
+    car.undone = nil
+    fh.fxNow = {}                              -- (the vehicles' effect lists, read once this frame)
+    -- (a new frame: the last one's cost done)
+    local c = fh.cost
+    if c and c.cur > 0 then c.frames, c.most, c.cur = c.frames + 1, math.max(c.most, c.cur), 0 end
+    if not fh.applied and not car.lagged then return end
+    local t0 = clock()
+    fh.applied = false
+    local fxNow, aliveOf = fh.fxNow, {}
+    for id, r in pairs(fh.others) do
+        if r.moved and r.base and r.last then
+            local here = aliveOf[r.pawn]
+            if here == nil then here = pawnAlive(r.pawn); aliveOf[r.pawn] = here end
+            if here and r.fx then
+                fxNow[r.pawn] = fxNow[r.pawn] or fhFxHere(r.pawn)
+                here = fxNow[r.pawn][id] == true
+            end
+            if here and at(r.comp.RelativeLocation, r.last) then setLoc(r, r.base[1], r.base[2], r.base[3]) end
+            r.moved = false                    -- (put back - or gone, or placed by the game since)
+        end
+    end
+    if car.lagged and car.comp and car.base and car.last and at(car.comp.RelativeLocation, car.last) then
+        local b = car.base
+        carSet(b[1], b[2], b[3], b[4], b[5], b[6])
+        car.undone = car.drawOff                   -- (the seat drawn last frame is this far off now: body follow)
+    end
+    car.lagged = false
+    costAdd('undo', t0)
+end
+-- the effects of the vehicles slowed (fh.fxPawns): at each step taken from each vehicle's own list, so
+-- one that just started is slowed too and one that is gone is never touched - UEVR's object check did
+-- not know most of them (2026-10-27: 13 of 17, the new ones least of all). Their own speed is the base.
+-- The first failure stops it for the session (said in the log and the menu), those already slowed back.
+local function fhEachFx(fn, only)
+    for _, pw in ipairs(only and { only } or fh.fxPawns or {}) do
+        if pawnAlive(pw) then
+            for _, c in ipairs(V.components(pw, 'Niagara.NiagaraComponent')) do
+                if fn(c, c:get_address()) == false then return false end
+            end
+        end
+    end
+    return true
+end
+-- one vehicle's effects (pw) to speed s; back: only those slowed (to the game's speed)
+local function fhSetFx(s, back, pw)
+    if fh.broken.fx then return end
+    local failed = nil
+    fhEachFx(function(c, id)
+        local f = fh.fx[id]
+        if not f and not back then
+            local okB, b = pcall(function() return tonumber(c.CustomTimeDilation) end)
+            f = { base = (okB and b and b > 0) and b or 1 }
+            fh.fx[id] = f
+        end
+        if not f or (back and not f.set) then return end
+        local ok, err = pcall(function() c:SetCustomTimeDilation(f.base * s) end)
+        if not ok then failed = { id = id, err = tostring(err) }; return false end
+        f.set = s ~= 1
+        if f.set and not f.ever then f.ever = true; fh.fxN = (fh.fxN or 0) + 1 end
+    end, pw)
+    if failed then
+        fh.broken.fx = failed.err
+        log('hit-stop: effects can not be slowed, left alone from now on: '..fh.broken.fx)
+        -- (those already slowed: back once, stopping at the first that fails)
+        fhEachFx(function(c, id)
+            local g = fh.fx[id]
+            if id ~= failed.id and g and g.set then
+                if not pcall(function() c:SetCustomTimeDilation(g.base) end) then return false end
+                g.set = false
+            end
+        end)
+        return
+    end
+    if pw then fh.fxAt[pw] = s end
+end
+-- The parts of your vehicle not drawn behind, said once per vehicle at the end of its first
+-- hit-stop: a part left at its real place looks like it runs ahead and comes back (2026-10-27, the user
+-- saw one on a podracer's engine). Name (class) < what it hangs on, [abs] if it is placed in the world;
+-- effects counted apart.
+local function fhLeftParts(p)
+    local moved = {}
+    if car.comp and fh.ownOk then moved[car.comp:get_address()] = true end
+    for _, r in pairs(fh.others) do if r.mine and r.moved then moved[r.comp:get_address()] = true end end
+    local list, fx, n = {}, 0, 0
+    for _, c in ipairs(V.components(p, 'Engine.SceneComponent')) do
+        local x, covered = c, false
+        for _ = 1, 24 do
+            if not x then break end
+            if moved[x:get_address()] then covered = true; break end
+            local ok, up = pcall(function() return x:GetAttachParent() end)
+            x = ok and up or nil
+        end
+        if not covered then
+            n = n + 1
+            local okC, cls = pcall(function() return c:get_class():get_fname():to_string() end)
+            cls = okC and cls or '?'
+            if cls:find('Niagara', 1, true) then
+                fx = fx + 1
+            elseif #list < 40 then
+                local okP, par = pcall(function() local u = c:GetAttachParent(); return u and u:get_fname():to_string() or 'nothing' end)
+                local okA, abs = pcall(function() return c:IsUsingAbsoluteLocation() end)
+                list[#list + 1] = c:get_fname():to_string()..' ('..cls..') < '..(okP and par or '?')..((okA and abs == true) and ' [abs]' or '')
+            end
+        end
+    end
+    log('hit-stop: your parts not drawn behind ('..n..', '..fx..' of them effects): '..table.concat(list, ', '))
+end
+hsEnd = function()
+    if not fh.active then return end
+    -- (once per vehicle: what of it was not drawn behind)
+    if V.fhOpt.log and fh.ownOk and not fh.told.leftParts then
+        fh.told.leftParts = true
+        local p = V.pawnAndVehicle()
+        if p then pcall(fhLeftParts, p) end
+    end
+    fh.active = false
+    fh.D, fh.Dpeak, fh.ownLag, fh.ownCur, fh.ownAcc, fh.ownPeak = 0, 0, nil, nil, nil, nil
+    fh.freeze, fh.freezeL, fh.freezeShown, fh.findPending = 0, nil, nil, false
+    local moved, fxNow, nParts, nFx = {}, {}, 0, 0
+    for id, r in pairs(fh.others) do
+        if r.ever and not r.mine and r.pawnId then moved[r.pawnId] = true end
+        if r.ever then nParts = nParts + 1; if r.fx then nFx = nFx + 1 end end
+        if r.moved and r.base and r.last then
+            pcall(function()
+                local here = pawnAlive(r.pawn)
+                if here and r.fx then
+                    fxNow[r.pawn] = fxNow[r.pawn] or fhFxHere(r.pawn)
+                    here = fxNow[r.pawn][id] == true
+                end
+                if here and at(r.comp.RelativeLocation, r.last) then setLoc(r, r.base[1], r.base[2], r.base[3]) end   -- (else the game placed it since)
+            end)
+        end
+        r.base, r.last, r.moved, r.ever = nil, nil, false, false
+    end
+    fh.others, fh.lags, fh.applied, fh.fxNear = {}, {}, false, {}
+    local nMoved, nLeft = 0, 0
+    for _ in pairs(moved) do nMoved = nMoved + 1 end
+    for _ in pairs(fh.leftSet or {}) do nLeft = nLeft + 1 end
+    for _, pw in ipairs(fh.fxPawns or {}) do
+        if fh.fxAt[pw] and fh.fxAt[pw] ~= 1 then pcall(fhSetFx, 1, true, pw) end
+    end
+    fh.fx, fh.fxS, fh.fxPawns, fh.fxAt = {}, nil, {}, {}
+    -- (the menu: what it did this time; the reasons are fixed texts, put in the player's language there)
+    local i = fh.info
+    i.used, i.mph = true, fh.mph
+    i.ownCm = fh.ownOk and math.floor(fh.lagMost + 0.5) or nil
+    i.ownWhy = (not fh.ownOk) and (fh.ownWhy or CANT) or nil
+    i.moved, i.left = nMoved, nLeft
+    i.othersWhy = (not V.fhOpt.others and 'turned off') or ((fh.othersFailed or fh.broken.find or fh.broken.velocity) and 'stopped after an error (see the log)') or nil
+    i.fxN = fh.fxN or 0
+    i.fxWhy = (not V.fhOpt.fx and 'turned off') or (fh.broken.fx and 'stopped after an error (see the log)') or nil
+    if not V.fhOpt.log then return end
+    local c, cost = fh.cost, ''
+    if c then
+        local n = math.max(1, c.frames)
+        cost = string.format('; cost: %.1f ms a frame (put back %.1f, tick %.1f, move %.1f), most %.0f ms, start %.0f ms; %d parts moved (%d effects)',
+            1000 * (c.undo + c.tick + c.draw) / n, 1000 * c.undo / n, 1000 * c.tick / n, 1000 * c.draw / n, 1000 * c.most, 1000 * c.start, nParts, nFx)
+    end
+    log(string.format('hit-stop at %.0f mph: you %s; others %s; effects %s', fh.mph,
+        i.ownCm and ('drawn behind, up to '..i.ownCm..' cm') or ('left alone: '..tostring(i.ownWhy)),
+        i.othersWhy or (nMoved..' drawn behind, '..nLeft..' left alone'), i.fxWhy or (i.fxN..' slowed'))..cost)
+end
+hsStart = function(strength)
+    local t0 = clock()
+    if fh.broken.undo or fh.broken.start then
+        if not fh.told.undo then fh.told.undo = true; log('hit-stop: stopped after an error, nothing slows (see above)') end
+        return
+    end
+    local p, v = V.pawnAndVehicle()
+    if not p or not v then return end
+    local id = p:get_address()
+    if id ~= car.pawn then carNewPawn(id) end
+    local slow = math.max(0.1, 1 - 0.75 * math.min(1, strength))
+    local hold = math.max(0.02, tonumber(cfg.hitstopTime) or 0.164)
+    if fh.active then
+        -- (another boost while it runs: the stronger slow and the longer hold stay; each way back carries
+        -- on from where it is now; the shake keeps holding where it held)
+        if fh.t < fh.hold then slow, hold = math.min(slow, fh.slow), math.max(hold, fh.hold - fh.t)
+        elseif not fh.sling and fh.t < fh.hold + K.HS_RAMP then slow = math.min(slow, fh.slow + (1 - fh.slow) * ((fh.t - fh.hold) / K.HS_RAMP)) end
+        -- (the shake hold: in the hold it holds on; in the ramp from what is shown now; after it, anew)
+        if fh.freeze <= 0 then fh.freezeL = nil elseif fh.freeze < 1 then fh.freezeL = fh.freezeShown end
+        if fh.ownCur then fh.ownAcc = { fh.ownCur[1], fh.ownCur[2], fh.ownCur[3] } end
+        fh.ownPeak = nil
+        for _, L in pairs(fh.lags) do L.acc, L.peak = { L.cur[1], L.cur[2], L.cur[3] }, nil end
+    else
+        fh.D, fh.Dpeak, fh.lagMost, fh.fxN = 0, 0, 0, 0
+        fh.ownAcc, fh.ownPeak, fh.ownCur, fh.ownLag = { 0, 0, 0 }, nil, nil, nil
+        fh.others, fh.lags, fh.leftSet, fh.fx, fh.fxS, fh.fxNear = {}, {}, {}, {}, nil, {}
+        fh.cost = V.fhOpt.log and { undo = 0, tick = 0, draw = 0, start = 0, frames = 0, most = 0, cur = 0 } or nil
+        fh.fxAt = {}
+        if fh.warm then fh.warm.raced = true end     -- (the looking ahead at the others ends here)
+        fh.freezeL, fh.freezeShown, fh.findPending = nil, nil, false
+        fh.sling = V.fhOpt.sling ~= false
+        fh.mph = tonumber(v.SpeedMPH) or 0
+        pawnKnown(p)
+        fh.offline = V.fhOpt.pods == true and (V.fhOpt.podsOnline or fhOffline())
+        if V.fhOpt.pods and not fh.offline and not fh.told.online then
+            fh.told.online = true
+            log('hit-stop: Podracers too is offline only for now, and this is not offline (or can not be told): podracers left alone')
+        end
+        local key = (not V.fhOpt.pods and 'plain') or (fh.offline and 'pods') or 'online'
+        if fh.foundKey ~= key then fh.found, fh.foundKey, fh.prep = {}, key, {} end
+        if V.fhOpt.view then fh.ownOk, fh.ownWhy = fhOwn(p) else fh.ownOk, fh.ownWhy = false, 'turned off' end
+    end
+    fh.active, fh.t, fh.slow, fh.hold, fh.C, fh.cut = true, 0, slow, hold, nil, false
+    fh.freeze = V.fhOpt.freeze and 1 or 0
+    if V.fhOpt.others and not fh.othersFailed then
+        local ok, err = pcall(fhCollectOthers, p, 2)
+        if not ok then fh.othersFailed = tostring(err); log('hit-stop: the other vehicles left alone from now on: '..fh.othersFailed) end
+    end
+    -- (the effects: yours and those of the nearest few vehicles drawn behind)
+    fh.fxPawns = { p }
+    for _, o in pairs(fh.fxNear) do fh.fxPawns[#fh.fxPawns + 1] = o end
+    if fh.cost then fh.cost.start = fh.cost.start + (clock() - t0) end
+end
+-- each tick: how slow it looks now, how far behind, the effects, the shake hold, each way back
+function V.hitstopTick(dt)
+    if not fh.active then return end
+    local t0 = clock()
+    if not V.cfg.hitstop or not S.anchor or S.yielding() then hsEnd(); return end
+    -- (the pause menu: the world stands still, so does this - it goes on afterwards)
+    if st.gateWhy == 'paused' then return end
+    fh.t = fh.t + dt
+    local d, R = fh.hold, K.HS_RAMP
+    local p, v = V.pawnAndVehicle()
+    local s, slowing = 1, false
+    if fh.sling then
+        -- Right after the stall (fhSling, 2026-10-27, the user: "not stall, normal, then catch up - stall
+        -- and catch up at once: more natural, and the vehicle feels fast"): after the hold what you see goes
+        -- straight on from the slow speed past the game's, catches up and settles - one move, a slingshot.
+        -- D goes on from where the hold left it as a cubic: its slope (1 - slow) carried on, so the speed
+        -- never jumps, down to 0 with no slope after fhCatch.
+        if fh.t < d then
+            s, slowing = fh.slow, true
+            fh.D = fh.D + (1 - s) * dt
+            fh.Dpeak = fh.D
+            -- (as far back as it can go - where the farthest starts easing it off, 70 % of it - the stall ends
+            -- and the catch-up starts at once: held there it would look like normal speed and the catch-up
+            -- like a second hit. 2026-10-27, Myth: afterburner 1.0 for 0.4 s at 430 mph wants 60 m, 15 m
+            -- were reached in 0.1 s. The catch-up's cubic first goes on back a little more - at most
+            -- 4/27 x its time x (1 - slow) of time - so that much is kept free.)
+            local c = fh.ownCur
+            if c and v then
+                local u = v.Velocity
+                local sp = math.sqrt((tonumber(u.X) or 0) ^ 2 + (tonumber(u.Y) or 0) ^ 2 + (tonumber(u.Z) or 0) ^ 2)
+                local more = sp * (4 / 27) * math.max(0.1, tonumber(V.fhOpt.catch) or 0.35) * (1 - fh.slow)
+                if math.sqrt(c[1] * c[1] + c[2] * c[2] + c[3] * c[3]) + more >= 0.7 * math.max(0, tonumber(V.fhOpt.maxLag) or 1500) then
+                    fh.hold, fh.cut = fh.t, true
+                end
+            end
+        else
+            if not fh.C then fh.C, fh.D0, fh.m0 = math.max(0.1, tonumber(V.fhOpt.catch) or 0.35), fh.D, 1 - fh.slow end
+            local T, u = fh.C, math.min(1, (fh.t - d) / fh.C)
+            local u2, u3 = u * u, u * u * u
+            fh.D = math.max(0, fh.D0 * (2 * u3 - 3 * u2 + 1) + T * fh.m0 * (u3 - 2 * u2 + u))
+            -- (how fast it looks now: 1 - D'; the effects follow it back up to the game's speed)
+            local dD = fh.D0 * (6 * u2 - 6 * u) / T + fh.m0 * (3 * u2 - 4 * u + 1)
+            s = math.max(fh.slow, math.min(1, 1 - dD))
+        end
+    else
+    if fh.t < d then s = fh.slow elseif fh.t < d + R then s = fh.slow + (1 - fh.slow) * ((fh.t - d) / R) end
+    slowing = fh.t <= d + R
+    if slowing then
+        fh.D = fh.D + (1 - s) * dt
+        fh.Dpeak = fh.D
+    else
+        -- (the catch-up's time, set once as it starts: at least fhCatch, and long enough that what you see
+        -- never runs more than fhCatchMax in 100 faster than the game - smoothstep's top speed is 1.5 x
+        -- its average. 2026-10-27, the user: a short one (0.35 s, up to 1.35 x) felt like "a second
+        -- hit-stop half a beat later". Taken from how far you were really drawn behind: the farthest may
+        -- have eased it off.)
+        if not fh.C then
+            local behind = fh.Dpeak
+            if fh.ownOk and fh.ownLag and v then
+                local u, l = v.Velocity, fh.ownLag
+                local sp = math.sqrt((tonumber(u.X) or 0) ^ 2 + (tonumber(u.Y) or 0) ^ 2 + (tonumber(u.Z) or 0) ^ 2)
+                if sp > 100 then behind = math.min(behind, math.sqrt(l[1] * l[1] + l[2] * l[2] + l[3] * l[3]) / sp) end
+            end
+            local most = math.max(0.01, (tonumber(V.fhOpt.catchMax) or 8) / 100)
+            fh.C = math.max(math.max(0.05, tonumber(V.fhOpt.catch) or 0.35), 1.5 * behind / most)
+        end
+        local x = math.min(1, (fh.t - d - R) / fh.C)
+        fh.D = fh.Dpeak * (1 - x * x * (3 - 2 * x))
+    end
+    end
+    -- (after the slowing: how much of each way back is left - right after the stall it first grows on)
+    local left = fh.Dpeak > 0 and fh.D / fh.Dpeak or 0
+    fh.freeze = (not V.fhOpt.freeze and 0) or (fh.t < d and 1) or (fh.t < d + R and 1 - (fh.t - d) / R) or 0
+    if V.fhOpt.fx and not fh.broken.fx then
+        if fh.fxS == nil or math.abs(s - fh.fxS) >= 0.2 or (s == 1 and fh.fxS ~= 1) then fh.fxS = s end
+        -- (one vehicle's effects a tick, yours first: no frame touches all of them)
+        for _, pw in ipairs(fh.fxPawns) do
+            if fh.fxAt[pw] ~= fh.fxS then fhSetFx(fh.fxS, false, pw); break end
+        end
+    end
+    local k = (1 - s) * dt
+    -- (the vehicles not looked into yet: a few more each tick while it slows; each starts from here)
+    if not slowing then fh.findPending = false end
+    if fh.findPending and p and V.fhOpt.others and not fh.othersFailed then
+        local before = {}
+        for id in pairs(fh.lags) do before[id] = true end
+        local okC, errC = pcall(fhCollectOthers, p, 2)
+        if not okC then fh.othersFailed = tostring(errC); log('hit-stop: the other vehicles left alone from now on: '..fh.othersFailed) end
+        local fresh = 0
+        for id, o in pairs(fh.fxNear) do
+            if not before[id] then fh.fxPawns[#fh.fxPawns + 1] = o; fresh = fresh + 1 end
+        end
+        if fresh > 0 then fh.fxS = nil end             -- (their effects slowed at once too)
+    end
+    -- yours
+    if fh.ownOk and v then
+        local a = fh.ownAcc
+        if slowing then
+            local vel = v.Velocity
+            a[1], a[2], a[3] = a[1] - (tonumber(vel.X) or 0) * k, a[2] - (tonumber(vel.Y) or 0) * k, a[3] - (tonumber(vel.Z) or 0) * k
+            fh.ownPeak, fh.ownCur = nil, { a[1], a[2], a[3] }
+        else
+            fh.ownPeak = fh.ownPeak or { a[1], a[2], a[3] }
+            local pk = fh.ownPeak
+            fh.ownCur = { pk[1] * left, pk[2] * left, pk[3] * left }
+        end
+        local x, y, z = capLag(fh.ownCur[1], fh.ownCur[2], fh.ownCur[3])
+        fh.ownLag = { x, y, z }
+        fh.lagMost = math.max(fh.lagMost, math.sqrt(x * x + y * y + z * z))
+    else
+        fh.ownLag = nil
+    end
+    -- the others' (their velocity read once per vehicle; the first failure stops reading it)
+    for _, L in pairs(fh.lags) do
+        if slowing then
+            if not fh.broken.velocity and pawnAlive(L.pawn) then
+                local ok, u = pcall(function() local w = L.pawn:GetVelocity(); return { tonumber(w.X) or 0, tonumber(w.Y) or 0, tonumber(w.Z) or 0 } end)
+                if ok then
+                    L.acc[1], L.acc[2], L.acc[3] = L.acc[1] - u[1] * k, L.acc[2] - u[2] * k, L.acc[3] - u[3] * k
+                else
+                    fh.broken.velocity = tostring(u)
+                    log('hit-stop: the speed of the other vehicles can not be read, they stop slowing: '..fh.broken.velocity)
+                end
+            end
+            L.peak, L.cur = nil, { L.acc[1], L.acc[2], L.acc[3] }
+        else
+            L.peak = L.peak or { L.acc[1], L.acc[2], L.acc[3] }
+            L.cur = { L.peak[1] * left, L.peak[2] * left, L.peak[3] * left }
+        end
+        local x, y, z = capLag(L.cur[1], L.cur[2], L.cur[3])
+        L.lag = { x, y, z }
+    end
+    costAdd('tick', t0)
+    if fh.C and fh.t >= d + (fh.sling and 0 or R) + fh.C then hsEnd() end
+end
+-- Before the first boost of a race your vehicle's parts and effects are looked into a piece at a time,
+-- a small piece at a time once the cockpit is up (all of it is kept, so the boost finds it ready): the first
+-- boost of each race was one long frame, 15-36 ms (2026-10-27). Then, until the first boost, the others
+-- near you the same way, one a step (at the race start every car is near: the launch was 22-28 ms with
+-- your vehicle ready, from them). Then nothing until the next vehicle.
+local function fhWarm()
+    if fh.active or not V.cfg.hitstop or not V.fhOpt.view or not S.anchor or S.yielding() then return end
+    -- (only while a hit-stop can come: not with the add-on effects or the cockpit shake off, both strengths
+    -- at 0, or after it stopped on an error - else it looked at the others all race for nothing)
+    if not V.cfg.extras or not V.cfg.feelOn or not S.enabled or fh.broken.start or fh.broken.undo then return end
+    if (tonumber(cfg.hitstop) or 0) <= 0 and (tonumber(cfg.hitstopAB) or 0) <= 0 then return end
+    local p = V.pawnAndVehicle()
+    if not p then return end
+    local id = p:get_address()
+    local w = fh.warm
+    if not w or w.id ~= id then w = { id = id, step = 0, at = V.t + 0.5 }; fh.warm = w end
+    if V.t < w.at then return end
+    w.at = V.t + (w.done and 0 or 0.05)            -- (a piece each: yours every 0.05 s, then the others every tick)
+    if id ~= car.pawn then carNewPawn(id) end
+    if w.done then
+        -- (the others: one looked into or checked again a step, what it set up for a boost dropped)
+        if w.raced or not V.fhOpt.others or fh.othersFailed or fh.broken.find then return end
+        pcall(fhCollectOthers, p, 1)
+        fh.others, fh.lags, fh.leftSet, fh.fxNear, fh.findPending = {}, {}, {}, {}, false
+        return
+    end
+    w.step = w.step + 1
+    if w.step == 1 then
+        if not car.comp and not car.failed and fh.ownNot ~= id then
+            local ok, c, _, free = pcall(carFind, p)
+            if ok and c then car.comp, car.parent, car.free = c, c:GetAttachParent(), free == true end
+        end
+    elseif w.step == 2 then
+        if car.comp and checkPartStep(car.comp, FH_CHECK_STEP) == nil then w.step = 1 end     -- (more of it next step)
+    elseif w.step == 3 then
+        w.todo = (car.free and car.comp) and podParts(p, car.comp:get_address()) or {}
+    elseif w.todo and #w.todo > 0 then
+        if checkPartStep(w.todo[#w.todo], FH_CHECK_STEP) ~= nil then table.remove(w.todo) end   -- (a podracer's engines)
+        w.step = 3
+    else
+        -- (all of it as a boost does - cheap now; what it set up for a boost is dropped)
+        fh.offline = V.fhOpt.pods == true and (V.fhOpt.podsOnline or fhOffline())
+        local key = (not V.fhOpt.pods and 'plain') or (fh.offline and 'pods') or 'online'
+        if fh.foundKey ~= key then fh.found, fh.foundKey, fh.prep = {}, key, {} end
+        pcall(fhOwn, p)
+        fh.others, w.done = {}, true
+    end
+end
+-- (the menu: what it did the last time)
+function V.hitstopInfo() return fh.info, fh.active end
+
+-------------------------------------------------------------------------------- hit-stop check (test)
+-- 2026-10-27, the user: "check that it works the same as slowing the game did". For every hit-stop:
+-- how fast your seat really moved on screen - its drawn place from one frame to the next, along the
+-- vehicle's velocity, against real time - next to what slowing the game does (the game at s(t)).
+-- One line in the log at its end. It should look the same through the hold and the ramp, then faster
+-- while it catches up (slowing the game loses that time instead).
+-- Also when the cockpit's lunge at you came (the eye against the cockpit, forward / back): 2026-10-27,
+-- the user: "slowing the game, the vehicle comes at me at once; this way half a beat late" - slowing the
+-- game never held the cockpit shake (it runs on real time), this held it with fhFreeze (now off).
+-- Only reads what is there already (the drawn seat, the vehicle's velocity): no game calls of its own.
+local hc = { on = false }
+local function hcCurve(t, slow, hold)
+    local R = K.HS_RAMP
+    if t < hold then return slow elseif t < hold + R then return slow + (1 - slow) * ((t - hold) / R) end
+    return 1
+end
+local function hcSeat()
+    local s = S.renderSeat
+    return s and s.origin and { s.origin[1], s.origin[2], s.origin[3] } or nil
+end
+local function hcVel()
+    local _, v = V.pawnAndVehicle()
+    local u = v and v.Velocity
+    if not u then return nil end
+    return { tonumber(u.X) or 0, tonumber(u.Y) or 0, tonumber(u.Z) or 0 }
+end
+-- (a time line: the value nearest to each of these moments after it started)
+local HC_MARKS = { 0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5 }
+local function hcLine(list, key, fmt)
+    local out = {}
+    for _, m in ipairs(HC_MARKS) do
+        local best, bd = nil, 0.03
+        for _, x in ipairs(list) do
+            local d = math.abs(x.t - m)
+            if d < bd then best, bd = x[key], d end
+        end
+        out[#out + 1] = best and string.format(fmt, best) or '-'
+    end
+    return table.concat(out, '/')
+end
+local function checkReport(cut)
+    hc.on = false
+    -- (the stall as it was really shown: cut short where it could go no further back; slower than the
+    -- game anywhere = behind, faster = given back)
+    local R, hold, slow = K.HS_RAMP, hc.cut or hc.hold, hc.slow
+    local hN, hS, hT, rN, rS, rT, behind, given, top = 0, 0, 0, 0, 0, 0, 0, 0, 0
+    for _, x in ipairs(hc.rows) do
+        if x.t < hold then hN, hS, hT = hN + 1, hS + x.r, hT + x.want
+        elseif x.t < hold + R then rN, rS, rT = rN + 1, rS + x.r, rT + x.want end
+        if x.t >= hold then top = math.max(top, x.r) end
+        if x.r < 1 then behind = behind + (1 - x.r) * x.dt else given = given + (x.r - 1) * x.dt end
+    end
+    local function avg(s, n) return n > 0 and string.format('%.2f', s / n) or '-' end
+    local text = string.format('hit-stop check (%s) at %.0f mph, %d frames: hold looked %s (slowing the game: %s), ramp %s (%s); %.3f s behind (slowing the game: %.3f)',
+        hc.kind, hc.mph, #hc.rows, avg(hS, hN), avg(hT, hN), avg(rS, rN), avg(rT, rN), behind, (1 - slow) * (hc.hold + R / 2))
+    if hc.kind == 'picture' then
+        text = text..string.format('; then caught up%s in %.2f s: looked up to %.2f, %.3f s given back (the game itself: never behind)',
+            V.fhOpt.sling ~= false and ' right after the stall' or '', hc.catch or 0, top, given)
+        if hc.raw - hc.drawn > 1 then text = text..string.format('; eased off: drawn %.0f of %.0f cm behind', hc.drawn, hc.raw) end
+        if hc.why then text = text..'; your body: '..hc.why end
+        if hc.cut then text = text..string.format('; the stall cut at %.2f s (as far back as it goes)', hc.cut) end
+        text = text..'; your body drawn behind in '..hc.bodyN..' of '..hc.drawnN..' frames'
+    else
+        text = text..'; lost for good'
+    end
+    -- (the cockpit's lunge: when it got half way, and its most)
+    local pk, half = math.abs(hc.fPeak), nil
+    for _, x in ipairs(hc.fw) do if not half and math.abs(x.f) >= 0.5 * pk then half = x.t end end
+    if pk < 0.3 or not half then text = text..'; the cockpit: no lunge'
+    else text = text..string.format('; the cockpit came at you: half way at %.2f s, most %.1f cm at %.2f s', half, hc.fPeak, hc.fPeakT) end
+    if hc.kind == 'picture' then text = text..(V.fhOpt.freeze and ' (its shake held)' or ' (its shake not held)') end
+    -- (at 0.05 .. 0.5 s: how fast your seat looked, and the cockpit forward (+) / back (-) in cm)
+    text = text..'; at '..table.concat(HC_MARKS, '/')..' s: seat speed '..hcLine(hc.rows, 'r', '%.2f')..', the cockpit '..hcLine(hc.fw, 'f', '%.1f')
+    if hc.miss > 0 then text = text..'; '..hc.miss..' frames without the cockpit view' end
+    text = text..string.format('; frames: %d, late %d (over 1.4 x the usual %.1f ms), longest %.1f ms', hc.frames, hc.late, 1000 * hc.usual, 1000 * hc.longest)
+    if cut then text = text..'; cut short by '..cut end
+    log(text)
+end
+local hcDt = 0                             -- (this tick's time: the game's next step)
+-- (the frames: how long one usually takes outside a hit-stop, and during it how many came late - over
+-- 1.4 x that - and the longest: both ways side by side, 2026-10-27, the user: "this way still drops
+-- frames more than slowing the game")
+local hcUsual = nil
+checkStart = function(kind, slow, hold, why)
+    if hc.on then checkReport('another boost') end
+    hc = { on = true, kind = kind, slow = slow, hold = hold, why = why, mph = V.feelInfo.mph or 0, t = 0, rows = {}, miss = 0,
+        usual = hcUsual or (1 / 90), frames = 0, late = 0, longest = 0,
+        raw = 0, drawn = 0, bodyN = 0, drawnN = 0, prev = hcSeat(), vel = hcVel(), dtNext = hcDt, fwd0 = V.feelFwd or 0, fw = {}, fPeak = 0, fPeakT = 0 }
+end
+-- first thing each tick: the seat drawn last frame against the one before, over the time the game
+-- stepped in between
+local function checkTick(dt)
+    hcDt = dt
+    if not hc.on then
+        if dt > 0 and dt < 0.1 then hcUsual = hcUsual and hcUsual + (dt - hcUsual) * 0.05 or dt end
+        return
+    end
+    hc.frames, hc.longest = hc.frames + 1, math.max(hc.longest, dt)
+    if dt > 1.4 * hc.usual then hc.late = hc.late + 1 end
+    local pos, vel, d = hcSeat(), hcVel(), hc.dtNext or 0
+    if d > 0 then
+        hc.t = hc.t + d
+        local a, b = hc.vel, vel
+        if pos and hc.prev and a and b then
+            local vx, vy, vz = (a[1] + b[1]) / 2, (a[2] + b[2]) / 2, (a[3] + b[3]) / 2
+            local sp2 = vx * vx + vy * vy + vz * vz
+            if sp2 > 500 * 500 then                    -- (above 5 m/s: standing still says nothing)
+                local r = ((pos[1] - hc.prev[1]) * vx + (pos[2] - hc.prev[2]) * vy + (pos[3] - hc.prev[3]) * vz) / (sp2 * d)
+                local tm = hc.t - d / 2
+                hc.rows[#hc.rows + 1] = { t = tm, r = r, dt = d, want = hcCurve(tm, hc.slow, hc.hold) }
+            end
+        elseif not pos then
+            hc.miss = hc.miss + 1
+        end
+        -- (the eye against the cockpit as drawn last frame, from where it was before)
+        local f = (tonumber(V.feelFwd) or 0) - hc.fwd0
+        hc.fw[#hc.fw + 1] = { t = hc.t, f = f }
+        if math.abs(f) > math.abs(hc.fPeak) then hc.fPeak, hc.fPeakT = f, hc.t end
+    end
+    hc.prev, hc.vel, hc.dtNext = pos, vel, dt
+    -- (how far behind it should be and how far it was drawn - the farthest eases it off)
+    if hc.kind == 'picture' and fh.active then
+        hc.drawnN = hc.drawnN + 1
+        if fh.C then hc.catch = fh.C end
+        if fh.cut then hc.cut = fh.hold end
+        if car.lagged then hc.bodyN = hc.bodyN + 1 end           -- (drawn behind last frame: the undo comes after this)
+    end
+    if hc.kind == 'picture' and fh.active and fh.ownCur and fh.ownLag then
+        local c, l = fh.ownCur, fh.ownLag
+        hc.raw = math.max(hc.raw, math.sqrt(c[1] * c[1] + c[2] * c[2] + c[3] * c[3]))
+        hc.drawn = math.max(hc.drawn, math.sqrt(l[1] * l[1] + l[2] * l[2] + l[3] * l[3]))
+    end
+    local catch = hc.kind == 'picture' and (hc.catch or math.max(0.05, tonumber(V.fhOpt.catch) or 0.35)) or 0
+    if hc.t >= math.max(0.6, hc.hold + K.HS_RAMP + catch + 0.05) then checkReport() end
+end
 
 -------------------------------------------------------------------------------- body follow
 -- On jumps (bikes) the rider animation stands up into the fixed eye. A visible chest bone is
@@ -529,9 +1702,15 @@ local function pilotFollow(p, q, dt, grounded, airborne)
     end
     local seat = S.renderSeat
     if not st.pilotMesh or not seat then return end
+    -- (the seat is the one drawn last frame; the hit-stop moved the body for that frame and put it
+    -- back before this tick, so the chest is read where it really is - that move taken off the seat too,
+    -- or the body follow went wrong by metres during it, 2026-10-27, the user: "in jumps the view
+    -- sometimes does not follow the rider")
+    local off = car.undone
     local ok, hx, hy, hz = pcall(function()
         local h = st.pilotMesh:GetSocketLocation(K.FOLLOW_BONE)
         local o, sq = seat.origin, seat.quaternion
+        if off then o = { o[1] - off[1], o[2] - off[2], o[3] - off[3] } end
         local sx, sy, sz = unrotate(sq, h.X - o[1], h.Y - o[2], h.Z - o[3])   -- seat local
         local wx, wy, wz = rotate(sq, sx, sy, sz)                                -- back to world axes
         return unrotate(q, wx, wy, wz)                                           -- vehicle local axes
@@ -542,7 +1721,7 @@ local function pilotFollow(p, q, dt, grounded, airborne)
     if airborne then st.followUntil = V.t + K.FOLLOW_AFTER end
     local inAir = st.followUntil ~= nil and V.t < st.followUntil
     st.followW = st.followW + ((inAir and 1 or 0) - st.followW) * (1 - math.exp(-dt / (inAir and 0.05 or 0.15)))
-    if grounded and not inAir then                      -- learn the resting body position on the ground
+    if grounded and not inAir and not fh.active then    -- learn the resting body position on the ground (not while the hit-stop runs)
         local a = 1 - math.exp(-dt / 1.0)
         b[1] = b[1] + (hx - b[1]) * a; b[2] = b[2] + (hy - b[2]) * a; b[3] = b[3] + (hz - b[3]) * a
     end
@@ -585,8 +1764,11 @@ local function update(dt)
     st.rotPitch = 0
     V.feelDown, V.feelFwd = 0, 0
     computeCfg()
-    if not V.cfg.extras or not V.cfg.feelOn or not S.enabled or not S.anchor then reset(); return end
     local p, v = V.pawnAndVehicle()
+    -- (no vehicle - the menus between races: what was found is for the old one, also if the next one
+    -- comes at the same address)
+    if not p and car.pawn ~= nil then reset(); carNewPawn(nil); fh.warm = nil end
+    if not V.cfg.extras or not V.cfg.feelOn or not S.enabled or not S.anchor then reset(); return end
     if not p then reset(); return end
     if dt <= 0 then return end
     dt = math.min(dt, 0.05)
@@ -1042,9 +2224,23 @@ local function update(dt)
             lx, ly, lz = lx - tx - mx, ly - ty - my, lz - tz - mz - st.jp * g * math.min(kl, 1)
         end
         car.q, car.want = q, true                      -- (moved right before the frame is drawn)
+    elseif (fh.ownLag or (fh.active and fh.ownOk)) and not car.failed then
+        -- (the hit-stop alone moves the body: no shake on it)
+        carT[1], carT[2], carT[3], carTilt[1], carTilt[2] = 0, 0, 0, 0, 0
+        car.q, car.want = q, true
     else
         car.want = false
         if car.moved then carStop() end
+    end
+    -- (the hit-stop: the cockpit's shake holds where it was (in the vehicle's axes) while time
+    -- stands nearly still, and eases back over the ramp)
+    if fh.active and fh.freeze > 0 then
+        fh.freezeL = fh.freezeL or { lx, ly, lz }
+        local a, fz = fh.freeze, fh.freezeL
+        lx, ly, lz = lx + (fz[1] - lx) * a, ly + (fz[2] - ly) * a, lz + (fz[3] - lz) * a
+        fh.freezeShown = { lx, ly, lz }
+    elseif not fh.active then
+        fh.freezeL = nil
     end
     V.feelDown, V.feelFwd, V.air = -lz, lx, air       -- (the eye against the cockpit)
     po[1], po[2], po[3] = rotate(q, lx, ly, lz)
@@ -1067,7 +2263,22 @@ V.onTick('feel', function(dt)
         if V.t > (st.nextErr or 0) then st.nextErr = V.t + 5; log('error: '..tostring(err)) end
     end
     -- hit-stop on its own, so it always finishes whatever update() does
-    local okH, errH = pcall(hitstopTick, math.min(dt, 0.1))
-    if not okH then log('hit-stop error: '..tostring(errH)); pcall(hitstopEnd) end
+    local okF, errF = pcall(V.hitstopTick, math.min(dt, 0.1))
+    if not okF then log('hit-stop error: '..tostring(errF)); pcall(hsEnd) end
 end)
-V.onReset(function() warpStop(); hitstopEnd(); pcall(carStop) end)
+V.onReset(function() warpStop(); pcall(hsEnd); pcall(carStop) end)
+-- (the hit-stop: before anything else in the tick, what it drew behind goes back where the game had
+-- it; a failure stops it for the session, said in the log and the menu)
+table.insert(V.ticks, 1, { name = 'hit-stop', fn = function(dt)
+    local okW, errW = pcall(fhWarm)
+    if not okW then fh.warm = { id = fh.warm and fh.warm.id, done = true, raced = true, at = 0 }; if not fh.told.warm then fh.told.warm = true; log('hit-stop: looking at your vehicle ahead failed (done at the boost): '..tostring(errW)) end end
+    local okC, errC = pcall(checkTick, tonumber(dt) or 0)
+    if not okC then hc.on = false; if not fh.told.check then fh.told.check = true; log('hit-stop check failed: '..tostring(errC)) end end
+    local ok, err = pcall(fhUndo)
+    if not ok then
+        fh.broken.undo, fh.info.stopped = tostring(err), true
+        log('hit-stop: putting back failed, it stops: '..fh.broken.undo)
+        fh.othersFailed = fh.othersFailed or fh.broken.undo
+        pcall(hsEnd)
+    end
+end })

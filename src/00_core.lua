@@ -109,7 +109,8 @@ V.DEFAULTS = {
     keyLookBack = 'None', padLookBack = 'Right stick up',   -- look back from the cockpit seat while held
     detail = {},                   -- fine tuning: key -> value (only what the user changed)
     picBase = {},                  -- picture values for every track and weather (65_picture; a place's own replace them)
-    format = 2,                    -- 2 = 2.1.1: settings of older versions put right, their old keys gone
+    format = 3,                    -- 2 = 2.1.1: settings of older versions put right, their old keys gone;
+                                   -- 3 = the hit-stop's defaults of older versions put right (40_feel)
 }
 -- Settings older versions saved and this one no longer keeps: read once from an older file (V.old) to
 -- carry them over (40_feel), never saved again.
@@ -126,7 +127,7 @@ function V.resetSettings()
 end
 V.cfg = {}
 V.resetSettings()
-V.cfgFormat = 2                            -- format of the loaded settings (no file: nothing to put right)
+V.cfgFormat = 3                            -- format of the loaded settings (no file: nothing to put right)
 do
     local ok, t = pcall(json.load_file, V.SETTINGS_FILE)
     if ok and type(t) == 'table' then
@@ -148,7 +149,7 @@ do
             end
         end
     end
-    V.cfg.format = 2
+    V.cfg.format = 3
 end
 
 -------------------------------------------------------------------------------- fine tuning
@@ -215,7 +216,8 @@ V.TYPE_DEFAULTS = {
     },
     Car = {
         feel = {},
-        detail = { followUp = 0.74, followFwd = 0, hitstopAB = 0.33, hitstopStrength = 0.53, hitstopTime = 0.16, landFloor = 5.11, landHit = 3.05, landing = 0.45, ramjet = 2.66, warpAmount = 5 },
+        -- (no hit-stop values of their own since 2026-10-27: every vehicle starts from the same new ones)
+        detail = { followUp = 0.74, followFwd = 0, landFloor = 5.11, landHit = 3.05, landing = 0.45, ramjet = 2.66, warpAmount = 5 },
     },
     Skimmer = {
         feel = { road = 73 },
@@ -236,7 +238,7 @@ V.PILOT_DEFAULTS = {
 -- vehicle type of a model key 'Type/Model' (cached)
 local typeOfModel = {}
 function V.typeOf(m)
-    if not m then return nil end
+    if type(m) ~= 'string' then return nil end
     local ty = typeOfModel[m]
     if ty == nil then ty = m:match('^(%a+)/') or false; typeOfModel[m] = ty end
     return ty or nil
@@ -261,9 +263,11 @@ V.VEHICLES_FILE = 'swgr_vr_vehicles.json'
 -- maps: picture per map. legacy: the vehicle names that had values when the file came from a version
 -- before 2.1.1 (named the older way), until each is put right (20_vehicle); moved: what older names
 -- had when they were put right, until a vehicle of that name turns up and takes it back.
--- format 4 = 2.1.1 (vehicles named after their seat part).
-V.veh = { eyes = {}, feel = {}, detail = {}, pilotFollow = {}, maps = {}, legacy = {}, moved = {}, format = 4 }
-V.vehFormat = 4                            -- format of the loaded file (older ones are converted)
+-- format 4 = 2.1.1 (vehicles named after their seat part); 5 = cars without hit-stop values of their own.
+V.veh = { eyes = {}, feel = {}, detail = {}, pilotFollow = {}, maps = {}, legacy = {}, moved = {}, format = 5 }
+V.vehFormat = 5                            -- format of the loaded file (older ones are converted)
+-- the hit-stop values cars had built in before format 5 (a file of an older format may still hold them)
+local CAR_HITSTOP_BEFORE = { hitstopAB = 0.33, hitstopStrength = 0.53, hitstopTime = 0.16 }
 do
     local ok, t = pcall(json.load_file, V.VEHICLES_FILE)
     if ok and type(t) == 'table' then
@@ -271,6 +275,10 @@ do
             if type(t[k]) == 'table' then V.veh[k] = t[k] end
         end
         for m, v in pairs(V.veh.moved) do if type(v) ~= 'table' then V.veh.moved[m] = nil end end   -- (a test build's marks)
+        -- (a name is text: a damaged file with a list in its place stopped the script loading, or the menu)
+        for _, k in ipairs({ 'eyes', 'feel', 'detail', 'pilotFollow', 'maps', 'legacy', 'moved' }) do
+            for m in pairs(V.veh[k]) do if type(m) ~= 'string' then V.veh[k][m] = nil end end
+        end
         V.vehFormat = tonumber(t.format) or 1
         if V.vehFormat < 2 then
             -- older files: body follow was kept apart ({ up, forward }; moved into detail by the
@@ -282,13 +290,15 @@ do
                 end
             end
         end
-        -- a value equal to the vehicle's built-in default is not the user's own
+        -- a value equal to the vehicle's built-in default is not the user's own (nor, in an older file,
+        -- equal to the one the vehicle had built in then)
         local function same(a, b, eps) return tonumber(a) and tonumber(b) and math.abs(a - b) < eps end
         for _, k in ipairs({ 'feel', 'detail' }) do
             for m, tbl in pairs(V.veh[k]) do
                 if type(tbl) == 'table' then
+                    local before = k == 'detail' and V.vehFormat < 5 and V.typeOf(m) == 'Car' and CAR_HITSTOP_BEFORE or {}
                     for key, v in pairs(tbl) do
-                        if same(v, V.builtinVal(k, m, key), 0.001) then tbl[key] = nil; V.vehPruned = true end
+                        if same(v, V.builtinVal(k, m, key), 0.001) or same(v, before[key], 0.001) then tbl[key] = nil; V.vehPruned = true end
                     end
                 end
             end
@@ -310,7 +320,7 @@ do
         end
     end
 end
-V.veh.format = 4
+V.veh.format = 5
 local vehSaveAt = nil
 function V.saveVeh() vehSaveAt = V.t + 0.5 end
 function V.saveVehNow()

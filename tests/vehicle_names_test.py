@@ -226,11 +226,11 @@ local after = 0
 for _ in pairs(V.veh.detail) do after = after + 1 end
 note('a vehicle that is not mixed: '..tostring(V.model)..', rollAmount '..tostring(V.valFor(V.model, 'rollAmount'))..', entries before / after: '..before..' / '..after)
 if after ~= before or V.valFor(V.model, 'rollAmount') ~= 0.8 then fail('tidy: a vehicle that is not mixed changed') end
--- the settings file: written in today's shape (format 2, no older keys), its older one kept
+-- the settings file: written in today's shape (format 3, no older keys), its older one kept
 local st = MOCK.files['swgr_vr_settings.json'] or {}
 note('settings: format '..tostring(st.format)..', older key left: '..tostring(st.shakeAlongPerVehicle ~= nil or st.shakeSaved ~= nil)
     ..', backup: '..tostring(MOCK.files['swgr_vr_settings_backup_format1.json'] ~= nil))
-if st.format ~= 2 or st.shakeAlongPerVehicle ~= nil or st.shakeSaved ~= nil then fail('tidy: the settings file still has older keys') end
+if st.format ~= 3 or st.shakeAlongPerVehicle ~= nil or st.shakeSaved ~= nil then fail('tidy: the settings file still has older keys') end
 if not MOCK.files['swgr_vr_settings_backup_format1.json'] then fail('tidy: no backup of the older settings file') end
 '''
 

@@ -1,4 +1,4 @@
-# STAR WARS Galactic Racer — VR Cockpit for UEVR (v2.1.1)
+# STAR WARS Galactic Racer — VR Cockpit for UEVR (v2.2.0)
 
 A UEVR profile and a single Lua script for **STAR WARS Galactic Racer**: you sit in the pilot
 seat of every vehicle, and the cockpit finally moves — engine and road rumble, boost lunges,
@@ -26,11 +26,13 @@ into one script) are by **ody**.
 
 Huge thanks to joeyhodge, elliotttate, madscy and Nero. Thanks also to
 [Random-kaizoku/PracticeMode-SWGR](https://github.com/Random-kaizoku/PracticeMode-SWGR) for the
-hint that helped map the characters' codenames to their names. The Korean menu uses
-Nanum Gothic by Naver (SIL Open Font License 1.1).
+hint that helped map the characters' codenames to their names, and to **Lt. Lit** for finding that
+the hit-stop cost time in online races. The Korean menu uses Nanum Gothic by Naver (SIL Open Font
+License 1.1).
 
 ## Contents
 
+- [What's new in v2.2.0](#whats-new-in-v220)
 - [What's new in v2.1.1](#whats-new-in-v211)
 - [What's new in v2.1.0](#whats-new-in-v210)
 - [What's new in v2.0.0](#whats-new-in-v200)
@@ -46,6 +48,20 @@ Nanum Gothic by Naver (SIL Open Font License 1.1).
 - [Building from source](#building-from-source)
 
 ---
+
+## What's new in v2.2.0
+
+- **The hit-stop no longer costs time online.** Lt. Lit found that in online podraces it cost about
+  8.5 m per ramjet against unmodded players. The old hit-stop slowed the whole game on your PC for a
+  split second; online your PC works out your own vehicle and sends it to the server, so that time
+  was lost for good. Now only what you see stops short for a split second and then shoots on to
+  catch up. The game keeps its full speed, so online races and time trials lose nothing.
+- **What stops short**: your vehicle, the nearest vehicles you see (ahead and beside first, up to 6)
+  and their effects — flames, exhaust, the beams between podracer engines. Podracers too, online as
+  well. The sound is left alone. Boost effects → **Hit-stop at boosts and the race start**.
+- **New defaults for every vehicle**: ramjet / start 0.7, afterburner 0.5, length 0.1 s. Changed the
+  hit-stop values before? They are kept, but try the defaults once (the reset arrow in front of each
+  value's name). Details: [Boost effects](#boost-effects), [CHANGELOG.md](CHANGELOG.md).
 
 ## What's new in v2.1.1
 
@@ -92,8 +108,8 @@ locks, game cameras) and adds, in **one script** (`swgr_vr_cockpit.lua`, English
 - **Boost punch** — afterburner, ramjet and race-start lunges with a real punch shape, nose
   lift, a low hum while boosting, and a shudder that grows as the ramjet overheats.
 - **Boost effects** — stronger colours, darker edges and a flash while boosting; a split-second
-  **hit-stop** (time dilation) and a **warp pulse** (VR world scale) at ramjet ignition and the
-  race start.
+  **hit-stop** (since v2.2.0 only what you see stops short, see [Boost effects](#boost-effects)) and
+  a **warp pulse** (VR world scale) at ramjet ignition and the race start.
 - **Landings** — the view is pressed down and comes back, a short **thud** at touchdown, and a
   **head hit** that snaps the view angle so it feels like your head takes the landing.
 - **Banking limit** — bikes and plane-like vehicles bank up to 90° when drifting; set how much
@@ -129,18 +145,19 @@ This mod goes into **three different places**. If you get confused, start with t
 | --- | --- | --- | --- |
 | ① | UEVR backend `UEVRBackend.dll` (joeyhodge's) | **UEVR folder** (the folder with `UEVRInjector.exe`) | required |
 | ② | Cockpit profile `SWGR-Win64-Shipping.zip` (contains the script `swgr_vr_cockpit.lua`) | **UEVR profile folder** `%APPDATA%\UnrealVRMod\SWGR-Win64-Shipping\` | required |
-| ③ | No-black-bars pak `SWGR-NoBlackBars-pak-v2.1.1.zip` (3 files) | **Game folder**, in `Griffin\Content\Paks\~mods\` | optional |
+| ③ | No-black-bars pak `SWGR-NoBlackBars-pak-v2.2.0.zip` (3 files) | **Game folder**, in `Griffin\Content\Paks\~mods\` | optional |
 
 - The script (`.lua`) does **not** go into the game folder. The pak files do **not** go into the profile
   folder.
 - Get ② and ③ from the release for your menu language: English menu
-  [**v2.1.1**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.1), Korean menu
-  [**v2.1.1-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.1.1-ko). The pak zip is the same
+  [**v2.2.0**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.2.0), Korean menu
+  [**v2.2.0-ko**](https://github.com/unuruu5760/SWGR-VR-Cockpit/releases/tag/v2.2.0-ko). The pak zip is the same
   in both.
 - ① is in joeyhodge's
-  [`102026warpspeedinjection+swzcp2+e-day`](https://github.com/joeyhodge/UEVR/releases/tag/102026warpspeedinjection%2Bswzcp2%2Be-day)
+  [`102226SWGRNoBarsJustCarsp4`](https://github.com/joeyhodge/UEVR/releases/tag/102226SWGRNoBarsJustCarsp4)
   release (all of joeyhodge's builds: [joeyhodge/UEVR releases](https://github.com/joeyhodge/UEVR/releases)).
-  It fixes the head tracking that sometimes went wrong right after injecting.
+  It fixes the head tracking that sometimes went wrong right after injecting. Its options for this game
+  are not needed with this profile (see [Known issues and notes](#known-issues-and-notes)).
 - The game (PC) and UEVR are not included here.
 
 ### Finding the folders
@@ -195,6 +212,7 @@ Korean zip into the profile folder (UEVR's menu loads fonts only from there; wit
    from the release. Leave the other profile files as they are.
 3. **Don't delete the `data` folder.** Your settings and per-vehicle values are in it, and the new version
    carries them over (to the new vehicle names and to brightness per track; see the [CHANGELOG](CHANGELOG.md)).
+   If you changed the hit-stop values, try the new defaults once (see [Boost effects](#boost-effects)).
 4. The pak has been the same since v2.0.0: leave it in.
 
 **Coming from v1.2.0 or older** (the old `swgr_cockpit_camera.lua`): do a [new install](#new-install). Since
@@ -293,7 +311,7 @@ explanation. From top to bottom:
 | *(top)* | **Add-on effects on**, View (VR cockpit / game cameras), hotkeys, **Recenter head at the seat**, the vehicle and character you are driving. |
 | **View and eye position** | Eye position (sideways / forward / up), Follow the vehicle (follow modes 1–5), **Banking %** with the live lean, Pilot visibility, **Follow the pilot on jumps** (up / forward), **Cut what is right at the eye** (cut distance), and the group **Game scenes and cameras**: race intro flyover, outside view when crashing, takedowns, finish line camera, **Look back**. |
 | **Cockpit shake** | On / off, five amounts in % (Engine, Road, Corners / drifts, Boost punch, Landings and hits), the **masters per vehicle type**, **Landing hits your head**, and **Ride shake** (in red: its six amounts and its own masters). |
-| **Boost effects** | Screen colours and flash %, hit-stop, warp pulse. |
+| **Boost effects** | Screen colours and flash %, **Hit-stop at boosts and the race start**, warp pulse. |
 | **VR picture for every track** | Picture values for every track and weather at once (in yellow). |
 | **Brightness per track and weather** | Picture values for the track and weather you race (in yellow): Brightness, Bloom, Colour strength, Contrast, and three older ones under More. |
 | **Race start** | Engine start shot then into the cockpit, car body engine hum %. |
@@ -357,9 +375,12 @@ The author tuned one vehicle of each type and made those values the defaults for
 | Type | Tuned on | Notable defaults |
 | --- | --- | --- |
 | Bike | Taipan | road 75 %, landing (floor 5.22, thud 3.39 / 4.23 Hz, lean 0.14), air lift 7.17 cm, cut distance 12.55 cm, more on landings 8.82; body follow up 0.85 / forward 1.21 |
-| Car | Beluga | ramjet 2.66, hit-stop 0.53 (ramjet / start) and 0.33 (afterburner), 0.16 s, warp 5, landing (floor 5.11, thud 3.05, press 0.45) |
+| Car | Beluga | ramjet 2.66, warp 5, landing (floor 5.11, thud 3.05, press 0.45) |
 | Skimmer | Saker, Merlin | road 73 %, cut distance 3 cm |
 | Plane | Myth | ramjet 3, bumps 1.779, engine while driving 2.527 |
+
+The hit-stop has the same defaults on every vehicle (since v2.2.0; before, Car — the landspeeders —
+had its own).
 
 Body follow per character on bikes: **Shade** (your own character, `Tomato`) uses the bike
 default above; **Nik Skandaro** (`Spinach`) has up 1.66 / forward 2.17.
@@ -482,8 +503,35 @@ pushed further while a landing presses the view down.
 Written into the game camera's post-process each frame: saturation, vignette and a short flash
 per boost type, easing back after. The renderer settings they need (`r.Tonemapper.Quality`,
 scene-colour fringe) are switched on only while an effect is visible and restored after.
-Hit-stop uses global time dilation (always restored); the warp pulse scales UEVR's world scale
-(+ = the world briefly shrinks away, − = it rushes at you).
+The warp pulse scales UEVR's world scale (+ = the world briefly shrinks away, − = it rushes at you).
+
+**Hit-stop** (**Hit-stop at boosts and the race start**): at ramjet ignition, the afterburner and
+the race start what you see stops short for a split second, then shoots on to catch up. Only the
+picture does it; the game keeps its full speed, so online races and time trials lose nothing. Right
+before each frame is drawn, your vehicle (with you in it) and the nearest vehicles you see (ahead and
+beside first, up to 6) are drawn a little behind where the game has them, and put back before the
+game's next step, so the game never works with a moved part. The effects on yours and the closest
+ones (flames, exhaust, the beams between podracer engines) run slower with them. Podracers too,
+online as well. A part is only moved if nothing in it collides, and the sound is left alone. If it
+ever fails, it stops for the session and says so in the menu (under the box) and in the log.
+
+| Fine tuning (advanced) → Boost screen, hit-stop, warp | Default | |
+| --- | --- | --- |
+| Hit-stop strength (ramjet / start) | 0.7 | How hard what you see stops short at ramjet ignition and the race start. 1 = the strongest (about a quarter speed), 0 = no stop. |
+| Hit-stop strength (afterburner) | 0.5 | The same stop for the afterburner. 0 = none. |
+| Hit-stop length (s) | 0.1 | How long the stop lasts before it shoots on to catch up. The faster you go, the shorter a long stop is cut: what you see can only be drawn so far behind. |
+
+These defaults are the same for every vehicle (before v2.2.0: landspeeders 0.53 / 0.33 / 0.16 s,
+every other vehicle 0.333 / 0.077 / 0.164 s). Values you changed in an older version are kept, but
+the hit-stop works differently now, so try the defaults once: press the small arrow in front of the
+value's name (*Back to default*), in Fine tuning (advanced) while you drive that vehicle, or in
+**Saved vehicles** → the vehicle → **Advanced options (fine tuning)**. Values you never changed take
+the new defaults by themselves (an old default that an older version saved in your files counts as
+never changed).
+
+Until v2.1.1 the hit-stop slowed the whole game on your PC (global time dilation). Online your PC
+works out your own vehicle and sends it to the server, so that time was lost for good — about 8.5 m
+per ramjet in an online podrace (found by Lt. Lit).
 
 ### Brightness per track and weather
 
@@ -556,12 +604,29 @@ Never used in races.
   difference at all. If anything seems off, delete those two lines.
 - **Right after injecting, the world follows your head or keeps snapping back?** That was the
   backend picking the wrong place to send the head pose (log: `Rejected unsafe new RHI-command
-  candidate`). joeyhodge's backend
-  [`102026warpspeedinjection+swzcp2+e-day`](https://github.com/joeyhodge/UEVR/releases/tag/102026warpspeedinjection%2Bswzcp2%2Be-day) includes a fix; with an older one,
+  candidate`). joeyhodge's backends since
+  [`102026warpspeedinjection+swzcp2+e-day`](https://github.com/joeyhodge/UEVR/releases/tag/102026warpspeedinjection%2Bswzcp2%2Be-day)
+  include a fix (the one in [Install and remove](#install-and-remove) too); with an older one,
   restart the game and inject again.
 - **Not every vehicle and character has been tested.** See the note in
   [Per-vehicle settings](#per-vehicle-settings-and-auto-save).
 - Values in the Korean and English builds are the same; only the menu language differs.
+
+### joeyhodge's backend options for this game (UEVR menu → Unreal → Compatibility)
+
+joeyhodge's new backend has experimental options for this game. **They are all off by default, and with our
+profile as it is you don't need them.** Turn one on only if you have the problem it is for. You can switch them in
+the menu while playing, or put them in the profile's `config.txt`.
+
+| Menu name (`config.txt` name) | Turn it on when | With our profile |
+| --- | --- | --- |
+| **Galactic Racer Cinematic Letterboxing Fix** (`VR_Compatibility_SWGRLetterboxingFix`) | **one eye (the right) goes black** in the camera shots after a crash. It removes only that scene's black-bar effect. | Not needed: `r.postprocessing.disablematerials 1` in `user_script.txt` already turns that effect off. |
+| **Galactic Racer Disable Panini - CVar** (`VR_Compatibility_SWGRDisablePanini`) | at high speed **the world looks bent, or your eyes hurt as if the IPD were wrong**. It turns off the game's edge-bending effect (Panini). | Not needed: the Panini lines in `user_script.txt` already turn it off (checked in a race: the option says "Game Panini is already disabled"). |
+| **Galactic Racer Panini Component Fallback** (`VR_Compatibility_SWGRPaniniComponentFallback`) | only if Disable Panini above changes nothing. Turn that one off and this one on. **With both on, neither works.** | Not needed. Since the 23 October game update it works from joeyhodge's `102626_FFR_SWGR_Patch` on. |
+| **Galactic Racer Movie Seek Budget** (`VR_Compatibility_SWGRBinkSeekBudget`) | the picture **freezes or stutters while a game video plays or is skipped**. It decodes the video a little each frame. Turn it on before the video starts. | Leave it off unless you have that problem. Since the 23 October game update it works from joeyhodge's `102626_FFR_SWGR_Patch` on. |
+
+Keep the Panini lines and `r.postprocessing.disablematerials 1` in `user_script.txt`. With Panini back on, VR feels
+like a headset with the wrong IPD and hurts the eyes (tested).
 
 ---
 
@@ -611,8 +676,8 @@ src/            the script, in sections (_header, 00_core … 90_menu, _footer),
                 lang_ko.lua = the Korean menu text, added only to the Korean build
 profile/        the UEVR profile files (config, cameras, cvars, user_script, v1.x validation notes)
 profile_ko/     extra files for the Korean profile only (the menu font and its license)
-tests/          run_tests.py + mock.lua: the script against a fake game; upgrade, vehicle name and
-                picture tests (see tests/README.md)
+tests/          run_tests.py + mock.lua: the script against a stand-in for the game; upgrade, vehicle name,
+                picture and hit-stop tests (see tests/README.md)
 build.py        builds dist/EN|KO/swgr_vr_cockpit.lua; "release" builds the packages
 ```
 
@@ -623,7 +688,7 @@ build.py        builds dist/EN|KO/swgr_vr_cockpit.lua; "release" builds the pack
 - `python build.py release [PAK_DIR]` → `release/EN/` and `release/KO/`, each with
   `SWGR-Win64-Shipping.zip` (the profile) and `swgr_vr_cockpit.lua`, and (with `PAK_DIR`) the
   pak mod zip in `release/`.
-- `python tests/run_tests.py dist/EN/swgr_vr_cockpit.lua - next` runs the script in a fake game:
+- `python tests/run_tests.py dist/EN/swgr_vr_cockpit.lua - next` runs the script in a stand-in for the game:
   menu (every widget clicked; duplicate IDs, tree / width / disabled balance, no `%` in texts),
   the engine-start shot, a race with every boost, landings, drift, impacts, pause, camera
   switches, hotkeys, a vehicle change and a script reset. Arguments: the script, a data folder

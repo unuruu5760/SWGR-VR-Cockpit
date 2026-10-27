@@ -1,3 +1,58 @@
+# v2.2.0 — 27 October 2026
+
+Same profile files as v2.1.1: replacing `scripts/swgr_vr_cockpit.lua` is enough, and your settings
+stay (see "Your values" below).
+
+**Changed**
+- **The hit-stop no longer costs time online** (thanks to **Lt. Lit**, who found it). In online
+  podraces it cost about 8.5 m per ramjet against unmodded players. The old hit-stop slowed the
+  whole game on your PC for a split second (global time dilation); online your PC works out your own
+  vehicle and sends it to the server, so the time it slowed was lost for good. Now only what you see
+  stops short for a split second and then shoots on to catch up. The game keeps its full speed, so
+  online races and time trials lose nothing.
+- Drawn behind, for the picture only: your vehicle (with you in it) and the nearest vehicles you see
+  (ahead and beside first, up to 6). The effects on yours and the closest ones (flames, exhaust, the
+  beams between podracer engines) run slower with them. Each part is put back before the game's next
+  step, so the game never works with a moved part. Podracers too, online as well; a part is only
+  moved if nothing in it collides. The sound is left alone.
+- Menu: Boost effects → **Hit-stop at boosts and the race start** (was "Hit-stop at ramjet / race
+  start"; it also fired at the afterburner before, lightly by default). If the hit-stop ever
+  fails, it stops for the session and says so in the menu (under that box) and in the log.
+- **New defaults for every vehicle** (Fine tuning (advanced) → Boost screen, hit-stop, warp):
+  Hit-stop strength (ramjet / start) 0.7, Hit-stop strength (afterburner) 0.5, Hit-stop length 0.1 s.
+  Before: landspeeders 0.53 / 0.33 / 0.16 s, every other vehicle 0.333 / 0.077 / 0.164 s;
+  landspeeders no longer have hit-stop values of their own. 1 = the strongest (about a quarter
+  speed), 0 = no stop; the faster you go, the shorter a long stop is cut.
+- In tests it dropped no more frames than the old hit-stop.
+
+**Your values**
+- **Changed the hit-stop values before?** They are kept. The hit-stop works differently now,
+  though, so try the defaults once: the small arrow in front of the value's name
+  (*Back to default*), in Fine tuning (advanced) → Boost screen, hit-stop, warp while you drive that
+  vehicle, or in **Saved vehicles** → the vehicle → **Advanced options (fine tuning)**.
+- Values you never changed take the new defaults by themselves. An old default that an older version
+  saved in your files counts as never changed (landspeeders' 0.53 / 0.33 / 0.16 in the vehicles
+  file, the shared 0.333 / 0.077 / 0.164 in the settings file): it is dropped once, the first time
+  this version reads the older file. The same numbers chosen in this version stay.
+- Unticked the hit-stop because of online races? You can tick it again.
+- Settings file format 3, vehicles file format 5. v2.1.1 can still read them if you go back, but it
+  forgets landspeeder hit-stop values set to exactly 0.53 / 0.33 / 0.16 (its own built-in ones).
+- Tested: settings and per-vehicle values saved by v2.0.0, v2.0.1, v2.1.0 and v2.1.1 all come
+  through (`tests/upgrade_test.py`); the hit-stop, its defaults and the values older versions saved
+  (`tests/hitstop_test.py`).
+
+**Fixed**
+- A damaged vehicles file (a list where the vehicle names go) no longer stops the script from
+  loading or breaks the menu; what is right in it is kept.
+
+**Docs**
+- joeyhodge's backend options for this game (UEVR menu → Unreal → Compatibility: Letterboxing Fix,
+  Disable Panini, Panini Component Fallback, Movie Seek Budget): not needed with our profile. README,
+  Known issues and notes, says what each is for and when to turn it on.
+- Requirements: joeyhodge's backend
+  [`102226SWGRNoBarsJustCarsp4`](https://github.com/joeyhodge/UEVR/releases/tag/102226SWGRNoBarsJustCarsp4) (`UEVRBackend.dll`, not
+  the `DIBR` one).
+
 # v2.1.1 — 18 October 2026
 
 Same backend and profile files as v2.1.0: replacing `scripts/swgr_vr_cockpit.lua` is enough, and

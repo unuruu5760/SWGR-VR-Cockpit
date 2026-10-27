@@ -238,7 +238,7 @@ def main():
                     problems.append('file ' + f + m)
             # and the files must be in today's shape
             st = new['files'].get('swgr_vr_settings.json') or {}
-            if st.get('format') != 2 or any(k in st for k in OBSOLETE):
+            if st.get('format') != 3 or any(k in st for k in OBSOLETE):
                 problems.append('settings file not in today\'s shape: format %s, older keys %s' % (st.get('format'), [k for k in OBSOLETE if k in st]))
             for i, (a, b) in enumerate(zip(old['snaps'], new['snaps'])):
                 for k, v in a.items():

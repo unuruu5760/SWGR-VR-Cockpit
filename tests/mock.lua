@@ -31,8 +31,14 @@ local function class(name)
 end
 MOCK.cdo = strict('CDO', {
     ComposeRotators = function(self, a, b) return { Pitch = a.Pitch + b.Pitch, Yaw = a.Yaw + b.Yaw, Roll = a.Roll + b.Roll } end,
-    SetGlobalTimeDilation = function(self, ctx, x) MOCK.dilation = x end,
+    SetGlobalTimeDilation = function(self, ctx, x) MOCK.dilation = x; MOCK.dilationCalls = (MOCK.dilationCalls or 0) + 1 end,
+    SetGlobalPitchModulation = function(self, ctx, p, t) assert(type(p) == 'number' and type(t) == 'number', 'pitch'); MOCK.pitch = p; MOCK.pitchCalls = (MOCK.pitchCalls or 0) + 1 end,
     GetGlobalTimeDilation = function(self, ctx) return MOCK.dilation or 1 end,
+    IsStandalone = function(self, world)
+        if MOCK.standaloneError then error('IsStandalone: no such function') end
+        MOCK.standaloneCalls = (MOCK.standaloneCalls or 0) + 1
+        return MOCK.online ~= true
+    end,
     GetTimeSeconds = function(self, ctx) return MOCK.gameTime or 0 end,
     GetLocalPlayerSubSystemFromPlayerController = function(self, pc, cls) return MOCK.inputSubsystem end,
     GetGameUserSettings = function(self) return { ControlScheme = MOCK.controlScheme or 0 } end,
@@ -104,9 +110,33 @@ function MOCK.makeVehicle(kind, model, className)
     local root = { get_full_name = function() return '/Game/Griffin/Vehicles/'..kind..'s/Customisation/'..kind..'/Root/SM_Root' end, Sockets = {} }
     local seatTf = { Rotation = quatT(0, 0, 0.7071, 0.7071), Translation = vec(10, 0, 40) }
     MOCK.seatTf = seatTf                   -- (the newest vehicle's seat: tests can shake it)
-    local body = newComponent('StaticMeshComponent', { StaticMesh = asset, SkeletalMesh = false, GetSocketTransform = function(self, s, space) return seatTf end,
-        GetAttachParent = function(self) return seatParent end })
-    local rootMesh = newComponent('StaticMeshComponent', { StaticMesh = root, SkeletalMesh = false, GetSocketTransform = function() return seatTf end })
+    local follow = {}
+    local body = newComponent('StaticMeshComponent', { StaticMesh = asset, SkeletalMesh = false,
+        -- (MOCK.seatFollows: the seat where the vehicle and the body part it hangs on are, as in the game)
+        GetSocketTransform = function(self, s, space)
+            if not (MOCK.seatFollows and follow.root) then return seatTf end
+            local t, b = v.VehicleTransform.Translation, follow.root.RelativeLocation
+            local p = follow.pod and follow.pod.RelativeLocation or vec(0, 0, 0)
+            return { Rotation = seatTf.Rotation, Translation = vec(t.X + b.X + p.X + 10, t.Y + b.Y + p.Y, t.Z + b.Z + p.Z + 40) }
+        end,
+        GetAttachParent = function(self) return seatParent end,
+        -- (its seat socket; its collision: MOCK.bodyCollision, query only unless a test says otherwise)
+        DoesSocketExist = function(self, n) return n == 'PilotSeat' end,
+        GetCollisionEnabled = function(self) return MOCK.bodyCollision or 1 end,
+        GetChildrenComponents = function(self, all, out) end,
+        RelativeLocation = vec(0, 0, 0), RelativeRotation = { Pitch = 0, Yaw = 0, Roll = 0 },
+        K2_SetRelativeLocationAndRotation = function(self, l, r, sweep, hit, tele)
+            for _, x in ipairs({ l.X, l.Y, l.Z, r.Pitch, r.Yaw, r.Roll }) do assert(type(x) == 'number' and x == x, 'bad seat place') end
+            assert(tele == true, 'teleport')
+            self.RelativeLocation = vec(l.X, l.Y, l.Z); self.RelativeRotation = { Pitch = r.Pitch, Yaw = r.Yaw, Roll = r.Roll }
+        end,
+        K2_SetRelativeLocation = function(self, l, sweep, hit, tele)
+            assert(tele == true, 'teleport')
+            self.RelativeLocation = vec(l.X, l.Y, l.Z)
+        end,
+        GetGenerateOverlapEvents = function(self) return MOCK.bodyOverlap == true end })
+    local rootMesh = newComponent('StaticMeshComponent', { StaticMesh = root, SkeletalMesh = false, GetSocketTransform = function() return seatTf end,
+        DoesSocketExist = function() return false end, GetCollisionEnabled = function() return 3 end })
     local anim = newComponent('VehicleAnimationComponent', { SeatSocketName = 'PilotSeat' })
     local hidden = {}
     local pilot = newComponent('SkeletalMeshComponent', {
@@ -116,7 +146,11 @@ function MOCK.makeVehicle(kind, model, className)
         IsBoneHiddenByName = function(self, b) return hidden[b] or false end,
         HideBoneByName = function(self, b, o) hidden[b] = true end, UnHideBoneByName = function(self, b) hidden[b] = false end,
         SetHiddenInGame = function(self, h, p) self.bHiddenInGame = h end,
-        GetSocketLocation = function(self, b) return vec(15, 2, 90 + (MOCK.chestUp or 0)) end,
+        GetSocketLocation = function(self, b)
+            if not (MOCK.seatFollows and follow.root) then return vec(15, 2, 90 + (MOCK.chestUp or 0)) end
+            local t, r = v.VehicleTransform.Translation, follow.root.RelativeLocation
+            return vec(t.X + r.X + 15, t.Y + r.Y + 2, t.Z + r.Z + 90 + (MOCK.chestUp or 0))
+        end,
     })
     local custom = newComponent('SceneComponent', {
         _name = 'CustomisationRoot', RelativeLocation = vec(0, 0, 0), RelativeRotation = { Pitch = 0, Yaw = 0, Roll = 0 },
@@ -142,17 +176,43 @@ function MOCK.makeVehicle(kind, model, className)
     -- the part the seat, the body and the pilot hang under (the game lifts it at the race start)
     local bodyRoot = newComponent('SceneComponent', {
         _name = 'VehicleBody', RelativeLocation = vec(0, 0, 0), RelativeRotation = { Pitch = 0, Yaw = 0, Roll = 0 },
+        is_a = function(self, c) return not tostring(c and c.name):find('PrimitiveComponent', 1, true) end,
+        GetChildrenComponents = function(self, all, out)
+            if podLayout and follow.pod then out[#out + 1] = follow.pod; if all then out[#out + 1] = body end
+            else out[#out + 1] = body end
+            if follow.hit then out[#out + 1] = follow.hit end
+        end,
         GetAttachParent = function(self) if podLayout then return nil end return custom end,
         K2_GetComponentToWorld = function(self) return { Rotation = quatT(0, 0, 0, 1), Translation = vec(1000, 2000, 300) } end,
         IsSimulatingPhysics = function(self) return false end,
         K2_SetRelativeLocationAndRotation = function(self, l, r, sweep, hit, tele)
             for _, x in ipairs({ l.X, l.Y, l.Z, r.Pitch, r.Yaw, r.Roll }) do assert(type(x) == 'number' and x == x, 'bad body place') end
             assert(tele == true, 'teleport')
+            if MOCK.moveError == self then error('K2_SetRelativeLocationAndRotation: failed') end
             self.RelativeLocation = vec(l.X, l.Y, l.Z); self.RelativeRotation = { Pitch = r.Pitch, Yaw = r.Yaw, Roll = r.Roll }
+            MOCK.alongCalls = (MOCK.alongCalls or 0) + 1
+        end,
+        K2_SetRelativeLocation = function(self, l, sweep, hit, tele)
+            for _, x in ipairs({ l.X, l.Y, l.Z }) do assert(type(x) == 'number' and x == x, 'bad body place') end
+            assert(tele == true, 'teleport')
+            if MOCK.moveError == self then error('K2_SetRelativeLocation: failed') end
+            self.RelativeLocation = vec(l.X, l.Y, l.Z)
             MOCK.alongCalls = (MOCK.alongCalls or 0) + 1
         end,
     })
     MOCK.bodyRoot = bodyRoot
+    follow.root = bodyRoot
+    MOCK.seatComp = body
+    -- (MOCK.hitShape: a hit shape with physics collision in the body, beside the seat mesh; never to move)
+    MOCK.hitShapeComp = nil
+    if MOCK.hitShape then
+        follow.hit = newComponent('BoxComponent', { _name = 'HitShape', RelativeLocation = vec(0, 0, 0), RelativeRotation = { Pitch = 0, Yaw = 0, Roll = 0 },
+            GetCollisionEnabled = function(self) return 3 end, GetAttachParent = function(self) return bodyRoot end,
+            GetChildrenComponents = function(self, all, out) end,
+            K2_SetRelativeLocationAndRotation = function(self) MOCK.hitMoves = (MOCK.hitMoves or 0) + 1 end,
+            K2_SetRelativeLocation = function(self) MOCK.hitMoves = (MOCK.hitMoves or 0) + 1 end })
+        MOCK.hitShapeComp = follow.hit
+    end
     -- podracer: the pod's own mesh between the seat and the free container
     MOCK.podMesh = nil
     seatParent = bodyRoot
@@ -161,29 +221,64 @@ function MOCK.makeVehicle(kind, model, className)
             _name = 'SkeletalPart0_SKM_PodRoot', RelativeLocation = vec(0, 0, 0), RelativeRotation = { Pitch = 0, Yaw = 0, Roll = 0 },
             GetAttachParent = function(self) return bodyRoot end,
             IsSimulatingPhysics = function(self) return false end,
+            GetChildrenComponents = function(self, all, out) out[#out + 1] = body end,
+            GetCollisionEnabled = function(self) return MOCK.podCollision or 3 end,
+            GetGenerateOverlapEvents = function(self) return MOCK.podOverlap == true end,
             K2_SetRelativeLocationAndRotation = function(self, l, r, sweep, hit, tele)
                 for _, x in ipairs({ l.X, l.Y, l.Z, r.Pitch, r.Yaw, r.Roll }) do assert(type(x) == 'number' and x == x, 'bad pod place') end
                 self.RelativeLocation = vec(l.X, l.Y, l.Z); self.RelativeRotation = { Pitch = r.Pitch, Yaw = r.Yaw, Roll = r.Roll }
                 MOCK.podCalls = (MOCK.podCalls or 0) + 1
                 MOCK.podMax = math.max(MOCK.podMax or 0, math.abs(l.X), math.abs(l.Y), math.abs(l.Z))
             end,
+            K2_SetRelativeLocation = function(self, l, sweep, hit, tele)
+                self.RelativeLocation = vec(l.X, l.Y, l.Z)
+                MOCK.podCalls = (MOCK.podCalls or 0) + 1
+                MOCK.podMax = math.max(MOCK.podMax or 0, math.abs(l.X), math.abs(l.Y), math.abs(l.Z))
+            end,
         })
     end
     if MOCK.podMesh and podLayout then seatParent = MOCK.podMesh end
+    follow.pod = podLayout and MOCK.podMesh or nil
+    local fx = newComponent('NiagaraComponent', { dil = 1,
+        SetCustomTimeDilation = function(self, x) assert(type(x) == 'number' and x > 0, 'effect speed'); self.dil = x; MOCK.fxCalls = (MOCK.fxCalls or 0) + 1 end })
+    MOCK.fx = fx
+    -- (MOCK.looseFx: an effect hanging on the vehicle's middle, like a podracer's laser between its engines)
+    local fxList = { fx }
+    MOCK.looseFxComp = nil
+    if MOCK.looseFx then
+        local loose = newComponent('NiagaraComponent', { _name = 'NiagaraComponent_Laser', dil = 1,
+            RelativeLocation = vec(0, 0, 0), RelativeRotation = { Pitch = 0, Yaw = 0, Roll = 0 },
+            Asset = { get_fname = function() return fname('NS_PlasmaBeam') end },
+            GetAttachParent = function(self) return custom end, GetChildrenComponents = function(self, all, out) end,
+            GetCollisionEnabled = function(self) return 0 end, IsUsingAbsoluteLocation = function(self) return false end,
+            SetCustomTimeDilation = function(self, x) self.dil = x end,
+            K2_SetRelativeLocationAndRotation = function(self, l, r, sweep, hit, tele)
+                assert(tele == true, 'teleport')
+                self.RelativeLocation = vec(l.X, l.Y, l.Z); self.RelativeRotation = { Pitch = r.Pitch, Yaw = r.Yaw, Roll = r.Roll }
+            end,
+            K2_SetRelativeLocation = function(self, l, sweep, hit, tele)
+                assert(tele == true, 'teleport')
+                self.RelativeLocation = vec(l.X, l.Y, l.Z)
+            end })
+        fxList[#fxList + 1] = loose
+        MOCK.looseFxComp = loose
+    end
     local camComp = newComponent('VehicleCameraComponent', {
         OnChangeCamera = function() MOCK.cameraCycles = (MOCK.cameraCycles or 0) + 1 end,
         GetActiveStackName = function() return fname('Chase') end,
     })
     local byClass = {
         StaticMeshComponent = { rootMesh, body }, SkeletalMeshComponent = { pilot },
-        VehicleAnimationComponent = { anim }, SceneComponent = { custom, bodyRoot, rootMesh, body },
-        VehicleCameraComponent = { camComp },
+        VehicleAnimationComponent = { anim }, SceneComponent = { custom, bodyRoot, rootMesh, body, MOCK.podMesh },
+        VehicleCameraComponent = { camComp }, NiagaraComponent = fxList,
     }
     local pawn = strict('pawn', {
         VehicleState = v, InputSource = 1, RootComponent = custom, CustomisationComponent = custom, PlayerState = MOCK.playerState, CstRootComponent = false,
         TuneComponent = { VehicleConfigData = { PlayerInputData = { Config = { LookBackAction = MOCK.lookBackAction } } } },
         GetGameTimeSinceCreation = function() return MOCK.clockT end,
         get_address = function() return 'pawn_'..model end,
+        GetVelocity = function(self) local x = v.Velocity; return vec(x.X, x.Y, x.Z) end,
+        K2_GetActorLocation = function(self) local t = v.VehicleTransform.Translation; return vec(t.X, t.Y, t.Z) end,
         is_a = function(self, c) return true end,
         get_class = function() return { get_fname = function() return fname(className or ('VBP_'..kind..'_C')) end } end,
         K2_GetComponentsByClass = function(self, c)
@@ -342,12 +437,18 @@ function MOCK.frame(dt)
     MOCK.gameTime = (MOCK.gameTime or 0) + (MOCK.paused and 0 or dt)
     -- the driven vehicle moves with its velocity while the game runs (a moving car that doesn't move
     -- looks like the pause menu to the script and its effects switch off)
-    local mv = MOCK.lastVehicle
-    if mv and not MOCK.paused and MOCK.pawn then
-        local t, vel = mv.VehicleTransform.Translation, mv.Velocity
-        t.X, t.Y, t.Z = t.X + (vel.X or 0) * dt, t.Y + (vel.Y or 0) * dt, t.Z + (vel.Z or 0) * dt
+    -- (MOCK.seatFollows: as in the game - the script's tick first, then the game moves the vehicle at its
+    -- own speed (time dilation), then the frame is drawn)
+    local function move(k)
+        local mv = MOCK.lastVehicle
+        if mv and not MOCK.paused and MOCK.pawn then
+            local t, vel = mv.VehicleTransform.Translation, mv.Velocity
+            t.X, t.Y, t.Z = t.X + (vel.X or 0) * dt * k, t.Y + (vel.Y or 0) * dt * k, t.Z + (vel.Z or 0) * dt * k
+        end
     end
+    if not MOCK.seatFollows then move(1) end
     MOCK.fire('tick', nil, dt)
+    if MOCK.seatFollows then move(MOCK.dilation or 1) end
     MOCK.fire('frame')
     MOCK.fire('draw')
     for view = 0, 1 do

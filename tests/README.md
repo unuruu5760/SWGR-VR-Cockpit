@@ -10,6 +10,7 @@ game: unknown fields are errors). Each ends with `RESULT: OK` (exit code 1 if an
 | `vehicle_names_test.py` | The name a vehicle gets (where its values are saved) for every model of every type, parts swapped between models, recipes of every kind or none, parts loading late or breaking off: right from the first moment, never changing during a race. |
 | `public_build_test.py` | The public build: the picture options still being worked on are left out of the menu and not used (values a working build saved for them stay in the file), the game's areas are not read, the picture controls work per track and weather, and every menu text of the Korean build has its Korean (controller button names stay as they are). |
 | `picture_weather_test.py` | Brightness per track and weather and the older whole-map values moving to a race; in a working build also the options still being worked on. |
+| `hitstop_test.py` | The hit-stop: only what you see stops short and catches up (the game is never slowed), your vehicle, the others near you and their effects drawn behind and put back, podracers, failures said and stopped, the defaults, and the values older versions saved (equal to an older default: the new one; chosen in this version: kept). |
 
 ```
 python tests/run_tests.py dist/EN/swgr_vr_cockpit.lua - next
@@ -18,6 +19,7 @@ python tests/upgrade_test.py dist/EN/swgr_vr_cockpit.lua .
 python tests/vehicle_names_test.py dist/EN/swgr_vr_cockpit.lua
 python tests/public_build_test.py dist/KO/swgr_vr_cockpit.lua dist/EN/swgr_vr_cockpit.lua
 python tests/picture_weather_test.py dist/KO/swgr_vr_cockpit.lua dist/EN/swgr_vr_cockpit.lua
+python tests/hitstop_test.py dist/KO/swgr_vr_cockpit.lua dist/EN/swgr_vr_cockpit.lua
 ```
 
 `run_tests.py` arguments: the script, a folder with the `data` json files (or `-` for a fresh

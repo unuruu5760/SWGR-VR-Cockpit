@@ -14,11 +14,13 @@ do
         for _, fn in ipairs(V.resets) do pcall(fn) end
         V.flushSaves()
     end)
-    -- a shared fine-tuning value equal to the recommended one is not the user's own
+    -- a shared fine-tuning value equal to the recommended one is not the user's own (nor, in a settings
+    -- file from before it got a new recommended one, equal to the one before: item.before)
     local pruned = false
     for k, v in pairs(V.cfg.detail) do
         local item = V.TUNE_INDEX[k]
-        if item and math.abs(v - item.base) < 0.001 then V.cfg.detail[k] = nil; pruned = true end
+        local old = item and V.cfgFormat < 3 and item.before
+        if item and (math.abs(v - item.base) < 0.001 or old and math.abs(v - old) < 0.001) then V.cfg.detail[k] = nil; pruned = true end
     end
     if pruned then V.save() end
     log('loaded v'..VERSION..' ('..LANG..')')

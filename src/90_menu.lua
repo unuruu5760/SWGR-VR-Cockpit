@@ -676,9 +676,12 @@ local function drawMenu()
         'Extra effects when you fire the afterburner or the ramjet, or at the race start.') then
         ch = pctSlider(tr('Screen colours and flash'), V.cfg, 'screen', 'screen',
             'While boosting the colours get stronger and the screen edges darker, with a short flash when it starts; then it eases back. 0 = off, 100 = recommended.') or ch
-        local c, v = checkbox(tr('Hit-stop at ramjet / race start'), V.cfg.hitstop, 'hitstop',
-            'The trick of action games: at ramjet ignition and the race start the whole game slows down for a split second, then snaps back to full speed. Feels like a punch.')
+        local c, v = checkbox(tr('Hit-stop at boosts and the race start'), V.cfg.hitstop, 'hitstop',
+            'The trick of action games: at ramjet ignition, the afterburner and the race start what you see stops short for a split second, then shoots on to catch up. Feels like a punch. Only your picture: the game keeps its full speed, so online races and time trials lose nothing.')
         if c then V.cfg.hitstop = v; ch = true end
+        -- (stopped after an error: said here, not only in the log)
+        local hsInfo = V.hitstopInfo and V.hitstopInfo()
+        if V.cfg.hitstop and hsInfo and hsInfo.stopped then colorText(tr('The hit-stop stopped after an error (see the log)'), COL.warn) end
         c, v = checkbox(tr('Warp pulse at ramjet / race start'), V.cfg.warp, 'warp',
             'At ramjet ignition and the race start the size of the world pulses for a moment (VR world scale), like the speed kick the flat game does by widening the screen.')
         if c then V.cfg.warp = v; ch = true end
