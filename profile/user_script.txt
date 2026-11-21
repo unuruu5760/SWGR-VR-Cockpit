@@ -24,8 +24,6 @@ r.SSR.Quality 0
 r.AmbientOcclusionLevels 0
 r.LensFlareQuality 0
 r.SSGI.LeakFreeReprojection 0
-r.AllowHDR 0
-r.HDR.EnableHDROutput 0
 
 # Reduce command-list submission overhead; validated unchanged-quality stereo A/B, 2026-10-13.
 # Engine defaults: MaxCommandsPerTranslate 256, CombineSingleAndParallel 0.
